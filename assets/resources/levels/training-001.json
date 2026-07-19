@@ -1,0 +1,11 @@
+{
+  "id": "training-001",
+  "gridWidth": 8,
+  "gridHeight": 6,
+  "gridCellSize": 100,
+  "imageId": "images/training-placeholder/forest/spriteFrame",
+  "snapThreshold": 10,
+  "minPieceSize": 1,
+  "maxPieceSize": 3,
+  "allowDisconnectedShapeCells": true
+}
