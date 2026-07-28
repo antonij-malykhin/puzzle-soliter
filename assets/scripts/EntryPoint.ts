@@ -1,4 +1,4 @@
-import { _decorator, Component, Node } from 'cc';
+import { _decorator, Component, debug, log, Node } from 'cc';
 import { AppBootstrap } from './Core/AppBootstrap';
 import { UIRoot } from './UI/UIRoot';
 import { PuzzleStage } from './UI/Puzzle/PuzzleStage';
@@ -21,11 +21,14 @@ export class EntryPoint extends Component {
         PerformanceMonitor.setEnabled(true);
         PerformanceMonitor.mark('game-start');
 
+        log('EntryPoint: Starting game initialization...');
         this.appBootstrap = new AppBootstrap(this.puzzleStage?.node.worldPosition);
         await this.appBootstrap.initialize();
+        log('EntryPoint: Game initialization completed.');
 
         this.uiRoot = this.uiRoot ?? this.createUIRoot();
         await this.uiRoot.initialize(this.appBootstrap.getEventBus());
+        log('EntryPoint: UI Root initialized.');
 
         this.puzzleStage = this.puzzleStage ?? this.createPuzzleStage();
         const inputManager = this.appBootstrap.getInputManager();

@@ -17,6 +17,7 @@ import {
     Sprite,
     SpriteFrame,
     ScrollView,
+    log,
 } from 'cc';
 import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
@@ -258,14 +259,14 @@ export class PuzzleStage extends Component {
             this.ensureTopLeftAnchor(pieceNode);
             pieceRenderer.setCellSize(levelData.gridCellSize);
             pieceRenderer.render(piece.getId(), piece.getBaseShape(), sourceSpriteFrame
-                ? {
-                    sourceSpriteFrame,
-                    targetOrigin: piece.getTargetOrigin(),
-                    gridWidth: levelData.gridWidth,
-                    gridHeight: levelData.gridHeight,
-                }
-                : undefined);
-
+            ? {
+                sourceSpriteFrame,
+                targetOrigin: piece.getTargetOrigin(),
+                gridWidth: levelData.gridWidth,
+                gridHeight: levelData.gridHeight,
+            }
+            : undefined);
+            
             const column = index % 2;
             const row = Math.floor(index / 2);
             const trayPosition = new Vec3(

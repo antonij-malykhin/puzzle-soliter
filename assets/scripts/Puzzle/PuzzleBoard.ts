@@ -83,7 +83,7 @@ export class PuzzleBoard {
     }
 
     public isFullyOccupied(): boolean {
-        return this.getCells().every((cell) => !!cell.getOwnerPieceId());
+        return this.getCells().every((cell) => cell.getOwnerPieceId() != null && cell.getOwnerPieceId() != undefined);
     }
 
     public toAbsoluteCoordinates(shape: Shape, origin: CellCoordinate): ReadonlyArray<CellCoordinate> {

@@ -8,6 +8,7 @@ import { CellCoordinate } from '../Puzzle/Types';
 import { PuzzleValidator } from '../Validation/PuzzleValidator';
 import { SnapSystem } from '../Validation/SnapSystem';
 import { LevelData } from '../Data/Models/LevelData';
+import { log } from 'cc';
 
 export class PuzzleManager {
     private board: PuzzleBoard | null = null;
@@ -39,6 +40,7 @@ export class PuzzleManager {
             allowDisconnectedShapeCells: levelData.allowDisconnectedShapeCells,
         });
 
+        log('PuzzleManager: Level initialized. Level ID =', levelData.id, 'Generated pieces =', generatedResult.pieces.length);
         generatedResult.pieces.forEach((definition) => {
             this.pieces.set(
                 definition.id,
@@ -131,7 +133,8 @@ export class PuzzleManager {
         }
 
         const everyPieceLocked = [...this.pieces.values()].every((piece) => piece.isLocked());
-        return everyPieceLocked && this.board.isFullyOccupied();
+        const fullyOccupied = this.board.isFullyOccupied();
+        return everyPieceLocked && fullyOccupied;
     }
 
     private getLockedPieceCount(): number {

@@ -1,4 +1,4 @@
-import { _decorator, Color, Component, Graphics, Node, Rect, Size, Sprite, SpriteFrame, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, log, Node, Rect, Size, Sprite, SpriteFrame, UITransform } from 'cc';
 import { Shape } from '../../Puzzle/Shape';
 import { CellCoordinate } from '../../Puzzle/Types';
 
@@ -42,8 +42,7 @@ export class PieceRenderer extends Component {
     
     public render(pieceId: string, shape: Shape, imageSliceOptions?: PieceImageSliceOptions): void {
         this.ensureSprite();
-        this.ensureGraphics();
-
+        //log(`[PieceRenderer] Rendering piece with shape:`, shape, `and image slice options:`, imageSliceOptions);
         const color = this.resolvePieceColor(pieceId);
         this.applySize(shape, color, imageSliceOptions);
         //this.applyCellMarkup(shape, color);
@@ -64,15 +63,6 @@ export class PieceRenderer extends Component {
 
         this.sprite = this.node.getComponent(Sprite) ?? this.node.addComponent(Sprite);
         this.sprite.enabled = false;
-    }
-
-    private ensureGraphics(): void {
-        if (this.graphics) {
-            return;
-        }
-
-        this.graphics = this.node.getComponent(Graphics) ?? this.node.addComponent(Graphics);
-        this.graphics.lineWidth = CELL_OUTLINE_WIDTH;
     }
 
     private resolvePieceColor(pieceId: string): Color {
