@@ -23,6 +23,24 @@ export class Shape {
         return this.cells.length;
     }
 
+    public getBoundingWidth(): number {
+        const minX = Math.min(...this.cells.map((cell) => cell.x));
+        const maxX = Math.max(...this.cells.map((cell) => cell.x));
+        return maxX - minX + 1;
+    }
+
+    public getBoundingHeight(): number {
+        const minY = Math.min(...this.cells.map((cell) => cell.y));
+        const maxY = Math.max(...this.cells.map((cell) => cell.y));
+        return maxY - minY + 1;
+    }
+
+    public isAxisAlignedRectangle(): boolean {
+        const width = this.getBoundingWidth();
+        const height = this.getBoundingHeight();
+        return this.getSize() === width * height;
+    }
+
     public rotateQuarterTurns(quarterTurns: number): Shape {
         const normalizedTurns = ((quarterTurns % 4) + 4) % 4;
         if (normalizedTurns === 0) {

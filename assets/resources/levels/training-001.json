@@ -1,11 +1,17 @@
 {
   "id": "training-001",
-  "gridWidth": 8,
-  "gridHeight": 6,
-  "gridCellSize": 100,
-  "imageId": "images/training-placeholder/forest/spriteFrame",
+  "gridWidth": 3,
+  "gridHeight": 3,
+  "gridCellWidth": 300,
+  "gridCellHeight": 300,
+  "imageId": "images/training-placeholder/cat/spriteFrame",
+  "gameMode": "rectSwapMerge",
+  "pieceColumns": 3,
+  "pieceRows": 3,
   "snapThreshold": 10,
   "minPieceSize": 1,
-  "maxPieceSize": 3,
+  "maxPieceSize": 4,
+  "crossingThresholdFraction": 0.5,
+  "mergeEnabled": true,
   "allowDisconnectedShapeCells": true
 }

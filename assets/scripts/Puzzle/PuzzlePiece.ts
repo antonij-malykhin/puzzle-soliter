@@ -6,13 +6,16 @@ export class PuzzlePiece {
     private currentOrigin: CellCoordinate | null = null;
     private currentRotation = 0;
     private state = PieceState.Free;
+    private groupId: string;
 
     public constructor(
         private readonly id: string,
         private readonly baseShape: Shape,
         private readonly targetOrigin: CellCoordinate,
         private readonly targetRotation = 0,
-    ) {}
+    ) {
+        this.groupId = id;
+    }
 
     public getId(): string {
         return this.id;
@@ -52,6 +55,14 @@ export class PuzzlePiece {
 
     public getTargetRotation(): number {
         return this.targetRotation;
+    }
+
+    public getGroupId(): string {
+        return this.groupId;
+    }
+
+    public setGroupId(groupId: string): void {
+        this.groupId = groupId;
     }
 
     public setPlaced(isPlaced: boolean): void {

@@ -35,7 +35,7 @@ export class PieceRenderer extends Component {
     private graphics: Graphics | null = null;
     
     @property
-    private placeholderCellSize = 24;
+    private placeholderCellSize: {x: number; y: number} = {x: 100, y: 100};
 
     @property(SpriteFrame)
     private defaultSpriteFrame: SpriteFrame | null = null;
@@ -48,8 +48,11 @@ export class PieceRenderer extends Component {
         //this.applyCellMarkup(shape, color);
     }
 
-    public setCellSize(cellSize: number): void {
-        this.placeholderCellSize = Math.max(MIN_CELL_SIZE, cellSize);
+    public setCellSize(cellSize: {x: number; y: number}): void {
+        this.placeholderCellSize = {
+            x: Math.max(MIN_CELL_SIZE, cellSize.x),
+            y: Math.max(MIN_CELL_SIZE, cellSize.y),
+        };
     }
     
     setContentSize(width: number, height: number): void {
@@ -85,8 +88,8 @@ export class PieceRenderer extends Component {
 
         const cells = shape.getCells();
         const bounds = this.getShapeBounds(cells);
-        const pieceWidth = bounds.width * this.placeholderCellSize;
-        const pieceHeight = bounds.height * this.placeholderCellSize;
+        const pieceWidth = bounds.width * this.placeholderCellSize.x;
+        const pieceHeight = bounds.height * this.placeholderCellSize.y;
         const left = 0;
         const bottom = -pieceHeight;
         const strokeColor = this.darkenColor(fillColor, OUTLINE_DARKEN_STEP);
@@ -96,12 +99,12 @@ export class PieceRenderer extends Component {
         graphics.strokeColor = strokeColor;
 
         cells.forEach((cell) => {
-            const x = left + cell.x * this.placeholderCellSize;
-            const y = bottom + cell.y * this.placeholderCellSize;
+            const x = left + cell.x * this.placeholderCellSize.x;
+            const y = bottom + cell.y * this.placeholderCellSize.y;
 
-            graphics.rect(x, y, this.placeholderCellSize, this.placeholderCellSize);
+            graphics.rect(x, y, this.placeholderCellSize.x, this.placeholderCellSize.y);
             graphics.fill();
-            graphics.rect(x, y, this.placeholderCellSize, this.placeholderCellSize);
+            graphics.rect(x, y, this.placeholderCellSize.x, this.placeholderCellSize.y);
             graphics.stroke();
         });
     }
@@ -138,7 +141,7 @@ export class PieceRenderer extends Component {
         this.node.removeAllChildren();
         this.uiTransform?.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
 
-        this.uiTransform?.setContentSize(bounds.width * this.placeholderCellSize, bounds.height * this.placeholderCellSize);
+        this.uiTransform?.setContentSize(bounds.width * this.placeholderCellSize.x, bounds.height * this.placeholderCellSize.y);
         for (const cell of cells) {
             const cellNode = new Node(`Cell_${cell.x}_${cell.y}`);
             cellNode.setParent(this.node);
@@ -152,9 +155,9 @@ export class PieceRenderer extends Component {
             cellSprite.spriteFrame = slicedSpriteFrame ?? this.defaultSpriteFrame;
             cellSprite.color = slicedSpriteFrame ? Color.WHITE : fallbackColor;
 
-            cellTransform.setContentSize(this.placeholderCellSize, this.placeholderCellSize);
+            cellTransform.setContentSize(this.placeholderCellSize.x, this.placeholderCellSize.y);
             cellTransform.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
-            cellNode.setPosition(cell.x * this.placeholderCellSize, -cell.y * this.placeholderCellSize);
+            cellNode.setPosition(cell.x * this.placeholderCellSize.x, -cell.y * this.placeholderCellSize.y);
         }
     }
 

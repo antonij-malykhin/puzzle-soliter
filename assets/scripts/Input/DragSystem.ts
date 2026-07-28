@@ -15,8 +15,7 @@ export class DragSystem {
             boardCenterWorldX: projection.originWorldX,
             boardCenterWorldY: projection.originWorldY,
             cellSize: projection.cellSize,
-            gridWidth: projection.gridWidth,
-            gridHeight: projection.gridHeight,
+            gridSize: projection.gridCellSize,
         });
     }
 
@@ -25,7 +24,7 @@ export class DragSystem {
         return this.puzzleManager.tryPlacePiece(pieceId, droppedOrigin, this.snapThreshold);
     }
 
-    private toBoardCoordinate(worldPosition: PointerWorldPosition): CellCoordinate {
+    public toBoardCoordinate(worldPosition: PointerWorldPosition): CellCoordinate {
         return this.mapper.worldToCell(worldPosition.x, worldPosition.y);
     }
 }

@@ -1,4 +1,4 @@
-import { _decorator, Component, debug, log, Node } from 'cc';
+import { _decorator, Component, debug, log, Node, UITransform } from 'cc';
 import { AppBootstrap } from './Core/AppBootstrap';
 import { UIRoot } from './UI/UIRoot';
 import { PuzzleStage } from './UI/Puzzle/PuzzleStage';
@@ -14,6 +14,12 @@ export class EntryPoint extends Component {
     @property(PuzzleStage)
     private puzzleStage: PuzzleStage | null = null;
 
+    @property(UITransform)
+    private boardUITransform: UITransform | null = null;
+
+    @property(UITransform)
+    private piecesLayerUITransform: UITransform | null = null;
+
     private appBootstrap: AppBootstrap | null = null;
 
     protected async start(): Promise<void> {
@@ -22,7 +28,11 @@ export class EntryPoint extends Component {
         PerformanceMonitor.mark('game-start');
 
         log('EntryPoint: Starting game initialization...');
-        this.appBootstrap = new AppBootstrap(this.puzzleStage?.node.worldPosition);
+        this.appBootstrap = new AppBootstrap(
+            this.puzzleStage?.node.worldPosition,
+            {x: this.boardUITransform?.contentSize.x ?? 0, y: this.boardUITransform?.contentSize.y ?? 0},
+            {x: this.piecesLayerUITransform?.contentSize.x ?? 0, y: this.piecesLayerUITransform?.contentSize.y ?? 0},
+        );
         await this.appBootstrap.initialize();
         log('EntryPoint: Game initialization completed.');
 

@@ -44,10 +44,18 @@ export class AppBootstrap {
     private inputManager: InputManager | null = null;
 
     private settingsSubscription: (() => void) | null = null;
-    private boardOrigin: { x: number; y: number } | null = null;
+    private readonly boardOrigin: { x: number; y: number } | null = null;
+    private readonly cellPiecesLayerSize: { x: number; y: number; };
+    private readonly boardLayerSize: { x: number; y: number; };
 
-    public constructor(boardOrigin: {x: number, y: number} | null = null) {
+    public constructor(
+        boardOrigin: {x: number, y: number} | null = null,
+        cellPiecesLayerSize: {x: number, y: number},
+        boardLayerSize: {x: number, y: number}
+    ) {
         this.boardOrigin = boardOrigin;
+        this.cellPiecesLayerSize = cellPiecesLayerSize;
+        this.boardLayerSize = boardLayerSize;
         this.settingsSubscription = this.eventBus.on('SettingsChanged', ({ settings }) => {
             this.audioManager.applySettings(settings);
             this.localizationManager.setLanguage(settings.language);
@@ -59,12 +67,14 @@ export class AppBootstrap {
 
         const levelId = this.levelService.getTrainingLevelId();
         const levelData = await this.levelService.getLevel(levelId);
-
+        levelData.gridCellWidth = this.boardLayerSize.x / levelData.gridWidth;
+        levelData.gridCellHeight = this.boardLayerSize.y / levelData.gridHeight;
         this.eventBus.emit('LevelLoaded', {
             levelId: levelData.id,
             gridWidth: levelData.gridWidth,
             gridHeight: levelData.gridHeight,
-            gridCellSize: levelData.gridCellSize,
+            gridCellWidth: levelData.gridCellWidth,
+            gridCellHeight: levelData.gridCellHeight
         });
 
         this.puzzleManager.initializeLevel(levelData);
@@ -74,9 +84,8 @@ export class AppBootstrap {
                 {
                     originWorldX: this.boardOrigin?.x ?? DEFAULT_BOARD_ORIGIN_WORLD_X,
                     originWorldY: this.boardOrigin?.y ?? DEFAULT_BOARD_ORIGIN_WORLD_Y,
-                    cellSize: levelData.gridCellSize,
-                    gridWidth: levelData.gridWidth,
-                    gridHeight: levelData.gridHeight,
+                    cellSize: { x: levelData.gridCellWidth, y: levelData.gridCellHeight },
+                    gridCellSize: { x: levelData.gridWidth, y: levelData.gridHeight },
                 },
                 levelData.snapThreshold,
             ),

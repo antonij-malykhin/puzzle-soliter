@@ -6,7 +6,6 @@ export interface PointerWorldPosition {
 export interface BoardProjectionConfig {
     originWorldX: number;
     originWorldY: number;
-    cellSize: number;
-    gridWidth: number;
-    gridHeight: number;
+    cellSize: {x: number; y: number};
+    gridCellSize: {x: number; y: number};
 }

@@ -46,6 +46,14 @@ export class PuzzleBoard {
         return this.cells.get(createCoordinateKey(coordinate)) ?? null;
     }
 
+    public getPieceIdAt(coordinate: CellCoordinate): string | null {
+        return this.getCellAt(coordinate)?.getOwnerPieceId() ?? null;
+    }
+
+    public getOccupiedCoordinates(pieceId: string): ReadonlyArray<CellCoordinate> {
+        return this.occupiedByPiece.get(pieceId) ?? [];
+    }
+
     public placePiece(piece: PuzzlePiece, origin: CellCoordinate): boolean {
         const pieceId = piece.getId();
         const shape = piece.getShapeForCurrentRotation();
@@ -93,5 +101,64 @@ export class PuzzleBoard {
             x: origin.x + cell.x - anchorOffset.x,
             y: origin.y + cell.y - anchorOffset.y,
         }));
+    }
+
+    public canPlaceShapeAtWithIgnoredPieces(
+        shape: Shape,
+        origin: CellCoordinate,
+        ignoredPieceIds: ReadonlySet<string>,
+    ): boolean {
+        const absoluteCoordinates = this.toAbsoluteCoordinates(shape, origin);
+        return absoluteCoordinates.every((coordinate) => {
+            if (!this.isInsideBounds(coordinate)) {
+                return false;
+            }
+
+            const ownerPieceId = this.getPieceIdAt(coordinate);
+            return ownerPieceId == null || ignoredPieceIds.has(ownerPieceId);
+        });
+    }
+
+    public swapPlacedPieces(
+        firstPiece: PuzzlePiece,
+        firstOrigin: CellCoordinate,
+        secondPiece: PuzzlePiece,
+        secondOrigin: CellCoordinate,
+    ): boolean {
+        const ignoredIds = new Set<string>([firstPiece.getId(), secondPiece.getId()]);
+        const canPlaceFirst = this.canPlaceShapeAtWithIgnoredPieces(
+            firstPiece.getShapeForCurrentRotation(),
+            secondOrigin,
+            ignoredIds,
+        );
+        const canPlaceSecond = this.canPlaceShapeAtWithIgnoredPieces(
+            secondPiece.getShapeForCurrentRotation(),
+            firstOrigin,
+            ignoredIds,
+        );
+
+        if (!canPlaceFirst || !canPlaceSecond) {
+            return false;
+        }
+
+        this.removePiece(firstPiece.getId());
+        this.removePiece(secondPiece.getId());
+
+        const firstPlaced = this.placePiece(firstPiece, secondOrigin);
+        const secondPlaced = this.placePiece(secondPiece, firstOrigin);
+        if (firstPlaced && secondPlaced) {
+            return true;
+        }
+
+        if (firstPlaced) {
+            this.removePiece(firstPiece.getId());
+        }
+        if (secondPlaced) {
+            this.removePiece(secondPiece.getId());
+        }
+
+        this.placePiece(firstPiece, firstOrigin);
+        this.placePiece(secondPiece, secondOrigin);
+        return false;
     }
 }

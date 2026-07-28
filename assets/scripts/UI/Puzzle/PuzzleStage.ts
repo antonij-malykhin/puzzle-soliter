@@ -30,6 +30,7 @@ import { GameEventMap } from '../../Core/Events/GameEventMap';
 import { InputManager } from '../../Input/InputManager';
 import { PuzzleManager } from '../../Managers/PuzzleManager';
 import { PuzzlePiece } from '../../Puzzle/PuzzlePiece';
+import { PuzzleGameplayMode } from '../../Data/Models/PuzzleGameplayMode';
 import { PieceRenderer } from './PieceRenderer';
 import { ImageBoardRenderer } from '../ImageBoardRenderer';
 import { ImageService } from '../../Services/ImageService';
@@ -64,6 +65,8 @@ export class PuzzleStage extends Component {
     private puzzleManager: PuzzleManager | null = null;
     private imageService: ImageService | null = null;
     private activePieceId: string | null = null;
+    private activeDragGroupPieceIds: string[] = [];
+    private lastPointerPosition: Vec2 | null = null;
 
     @property(Node)
     private touchInputNode: Node | null = null; // обычно Content/Viewport ScrollView
@@ -94,10 +97,22 @@ export class PuzzleStage extends Component {
             this.snapPieceNodeToBoard(pieceId);
         }));
 
+        this.disposables.push(eventBus.on('PieceMoved', ({ pieceId, origin }) => {
+            this.snapPieceNodeToOrigin(pieceId, origin.x, origin.y);
+        }));
+
         this.disposables.push(eventBus.on('PieceRotated', ({ pieceId, rotation }) => {
             const pieceRenderer = this.pieceRenderersById.get(pieceId);
             if (pieceRenderer) {
                 pieceRenderer.node.setRotationFromEuler(0, 0, -rotation * 90);
+            }
+        }));
+
+        this.disposables.push(eventBus.on('PiecesMerged', ({ pieceIds }) => {
+            this.animateMergedPieces(pieceIds);
+
+            if (this.activePieceId && pieceIds.indexOf(this.activePieceId) >= 0) {
+                this.activeDragGroupPieceIds = [...pieceIds];
             }
         }));
 
@@ -119,6 +134,8 @@ export class PuzzleStage extends Component {
 
         this.imageService = null;
         this.activePieceId = null;
+        this.activeDragGroupPieceIds = [];
+        this.lastPointerPosition = null;
     }
 
     protected onDestroy(): void {
@@ -140,9 +157,9 @@ export class PuzzleStage extends Component {
             this.pieceLayer.setParent(this.node);
         }
 
-        this.ensureTopLeftAnchor(this.boardLayer);
+        //this.ensureTopLeftAnchor(this.boardLayer);
         this.ensureTopLeftAnchor(this.pieceTrayLayer);
-        this.ensureTopLeftAnchor(this.pieceLayer);
+        //this.ensureTopLeftAnchor(this.pieceLayer);
     }
 
     private renderBoard(): void {
@@ -171,7 +188,7 @@ export class PuzzleStage extends Component {
         const topLeft = mapper.getTopLeftWorld();
 
         for (let index = 0; index <= gridWidth; index += 1) {
-            const offset = index * cellSize;
+            const offset = index * cellSize.x;
             const verticalX = topLeft.x + offset;
 
             graphics.moveTo(verticalX, topLeft.y);
@@ -179,7 +196,7 @@ export class PuzzleStage extends Component {
         }
 
         for (let index = 0; index <= gridHeight; index += 1) {
-            const offset = index * cellSize;
+            const offset = index * cellSize.y;
             const horizontalY = topLeft.y - offset;
             graphics.moveTo(topLeft.x, horizontalY);
             graphics.lineTo(topLeft.x + fullWidth, horizontalY);
@@ -194,7 +211,7 @@ export class PuzzleStage extends Component {
             cellSprite.type = Sprite.Type.SIMPLE;
             cellSprite.spriteFrame = this.defaultSpriteFrame;
             cellSprite.color = new Color(255, 255, 255, 150); // Transparent fill
-            cellTransform.setContentSize(cellSize, cellSize);
+            cellTransform.setContentSize(cellSize.x, cellSize.y);
             cellTransform.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
             const worldPosition = mapper.cellToWorld(cellCoordinate.x, cellCoordinate.y);
             cellNode.setPosition(worldPosition.x, worldPosition.y, 0);
@@ -210,8 +227,8 @@ export class PuzzleStage extends Component {
             return;
         }
 
-        const boardWidth = board.getGridWidth() * levelData.gridCellSize;
-        const boardHeight = board.getGridHeight() * levelData.gridCellSize;
+        const boardWidth = board.getGridWidth() * levelData.gridCellWidth;
+        const boardHeight = board.getGridHeight() * levelData.gridCellHeight;
 
         await this.imageRenderer.render(
             levelData.imageId,
@@ -257,7 +274,7 @@ export class PuzzleStage extends Component {
             pieceNode.name = `Piece_${piece.getId()}`;
             pieceNode.setParent(this.pieceTrayLayer);
             this.ensureTopLeftAnchor(pieceNode);
-            pieceRenderer.setCellSize(levelData.gridCellSize);
+            pieceRenderer.setCellSize({x: levelData.gridCellWidth, y: levelData.gridCellHeight});
             pieceRenderer.render(piece.getId(), piece.getBaseShape(), sourceSpriteFrame
             ? {
                 sourceSpriteFrame,
@@ -267,14 +284,15 @@ export class PuzzleStage extends Component {
             }
             : undefined);
             
-            const column = index % 2;
-            const row = Math.floor(index / 2);
-            const trayPosition = new Vec3(
-                column * DEFAULT_PIECE_TRAY_COLUMN_GAP,
-                -row * DEFAULT_PIECE_TRAY_ROW_GAP,
-                0,
-            );
-            pieceNode.setPosition(trayPosition);
+            const trayPosition = this.getTrayPosition(index);
+            if (this.isRectSwapMergeMode()) {
+                const currentOrigin = piece.getCurrentOrigin() ?? piece.getTargetOrigin();
+                const worldPosition = this.toWorld(currentOrigin.x, currentOrigin.y);
+                pieceNode.setParent(this.pieceLayer);
+                pieceNode.setPosition(worldPosition);
+            } else {
+                pieceNode.setPosition(trayPosition);
+            }
             pieceNode.active = true;
 
             this.pieceRenderersById.set(piece.getId(), pieceRenderer);
@@ -305,6 +323,27 @@ export class PuzzleStage extends Component {
         tween(pieceRenderer.node)
             .to(0.3, { position: trayPosition }, { easing: 'quartInOut' })
             .start();
+    }
+
+    private snapPieceNodeToOrigin(pieceId: string, cellX: number, cellY: number): void {
+        const pieceRenderer = this.pieceRenderersById.get(pieceId);
+        if (!pieceRenderer) {
+            return;
+        }
+
+        const worldPosition = this.toWorld(cellX, cellY);
+        pieceRenderer.node.setParent(this.pieceLayer);
+        pieceRenderer.node.setPosition(worldPosition);
+    }
+
+    private getTrayPosition(index: number): Vec3 {
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        return new Vec3(
+            column * DEFAULT_PIECE_TRAY_COLUMN_GAP,
+            -row * DEFAULT_PIECE_TRAY_ROW_GAP,
+            0,
+        );
     }
 
     private bindTouchInput(): void {
@@ -354,6 +393,10 @@ export class PuzzleStage extends Component {
         }
 
         this.activePieceId = selectedPiece.getId();
+        this.activeDragGroupPieceIds = this.isRectSwapMergeMode()
+            ? [...(this.puzzleManager?.getGroupPieceIds(this.activePieceId) ?? [this.activePieceId])]
+            : [this.activePieceId];
+        this.lastPointerPosition = new Vec2(location.x, location.y);
         this.pieceScrollView && (this.pieceScrollView.enabled = false);
 
         inputManager.beginDrag(this.activePieceId, {
@@ -369,8 +412,15 @@ export class PuzzleStage extends Component {
             return;
         }
 
-        pieceRenderer.node.setParent(this.pieceLayer);
-        pieceRenderer.node.setSiblingIndex(Number.MAX_SAFE_INTEGER);
+        this.activeDragGroupPieceIds.forEach((id) => {
+            const renderer = this.pieceRenderersById.get(id);
+            if (!renderer) {
+                return;
+            }
+
+            renderer.node.setParent(this.pieceLayer);
+            renderer.node.setSiblingIndex(Number.MAX_SAFE_INTEGER);
+        });
     }
 
     private onTouchMove(event: EventTouch): void {
@@ -380,12 +430,27 @@ export class PuzzleStage extends Component {
         }
 
         const location = event.getUILocation();
-        inputManager.updatePointer({ x: location.x, y: location.y });
+        const nextPointerPosition = new Vec2(location.x, location.y);
+        if (this.lastPointerPosition) {
+            const deltaX = nextPointerPosition.x - this.lastPointerPosition.x;
+            const deltaY = nextPointerPosition.y - this.lastPointerPosition.y;
+            this.activeDragGroupPieceIds.forEach((id) => {
+                const renderer = this.pieceRenderersById.get(id);
+                if (!renderer) {
+                    return;
+                }
 
-        const pieceRenderer = this.pieceRenderersById.get(this.activePieceId);
-        if (pieceRenderer) {
-            pieceRenderer.node.setWorldPosition(location.x, location.y, 0);
+                const currentWorldPosition = renderer.node.worldPosition;
+                renderer.node.setWorldPosition(
+                    currentWorldPosition.x + deltaX,
+                    currentWorldPosition.y + deltaY,
+                    currentWorldPosition.z,
+                );
+            });
         }
+
+        this.lastPointerPosition = nextPointerPosition;
+        inputManager.updatePointer({ x: location.x, y: location.y });
     }
 
     private onTouchEnd(): void {
@@ -403,14 +468,23 @@ export class PuzzleStage extends Component {
         const pieceRenderer = this.pieceRenderersById.get(this.activePieceId);
 
         if (placed) {
-            this.snapPieceNodeToBoard(pieceId);
+            if (this.isRectSwapMergeMode()) {
+                this.snapGroupNodesToCurrentOrigin(this.activeDragGroupPieceIds);
+            } else {
+                this.snapPieceNodeToBoard(pieceId);
+            }
         } else {
-            // Placement failed - animate piece back to tray
-            pieceRenderer?.node.setParent(this.pieceTrayLayer);
-            this.animatePieceToTray(pieceId);
+            if (this.isRectSwapMergeMode()) {
+                this.snapGroupNodesToCurrentOrigin(this.activeDragGroupPieceIds);
+            } else {
+                pieceRenderer?.node.setParent(this.pieceTrayLayer);
+                this.animatePieceToTray(pieceId);
+            }
         }
 
         this.activePieceId = null;
+        this.activeDragGroupPieceIds = [];
+        this.lastPointerPosition = null;
         this.pieceScrollView && (this.pieceScrollView.enabled = true);
     }
 
@@ -476,9 +550,14 @@ export class PuzzleStage extends Component {
         return new BoardCoordinateMapper({
             boardCenterWorldX: DEFAULT_BOARD_ORIGIN_WORLD_X,
             boardCenterWorldY: DEFAULT_BOARD_ORIGIN_WORLD_Y,
-            cellSize: this.puzzleManager?.getLevelData()?.gridCellSize ?? 24,
-            gridWidth: board.getGridWidth(),
-            gridHeight: board.getGridHeight(),
+            cellSize: {
+                x: this.puzzleManager?.getLevelData()?.gridCellWidth ?? 24,
+                y: this.puzzleManager?.getLevelData()?.gridCellHeight ?? 24,
+            },
+            gridSize: {
+                x: board.getGridWidth(),
+                y: board.getGridHeight(),
+            },
         });
     }
 
@@ -489,5 +568,38 @@ export class PuzzleStage extends Component {
 
         const uiTransform = node.getComponent(UITransform) ?? node.addComponent(UITransform);
         uiTransform.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
+    }
+
+    private snapPieceNodeToCurrentOrigin(pieceId: string): void {
+        const piece = this.puzzleManager?.getPieces().find((item) => item.getId() === pieceId);
+        if (!piece) {
+            return;
+        }
+
+        const origin = piece.getCurrentOrigin() ?? piece.getTargetOrigin();
+        this.snapPieceNodeToOrigin(pieceId, origin.x, origin.y);
+    }
+
+    private snapGroupNodesToCurrentOrigin(pieceIds: ReadonlyArray<string>): void {
+        pieceIds.forEach((pieceId) => this.snapPieceNodeToCurrentOrigin(pieceId));
+    }
+
+    private isRectSwapMergeMode(): boolean {
+        return this.puzzleManager?.getLevelData()?.gameMode === PuzzleGameplayMode.RectSwapMerge;
+    }
+
+    private animateMergedPieces(pieceIds: ReadonlyArray<string>): void {
+        pieceIds.forEach((pieceId) => {
+            const renderer = this.pieceRenderersById.get(pieceId);
+            if (!renderer) {
+                return;
+            }
+
+            const node = renderer.node;
+            tween(node)
+                .to(0.08, { scale: new Vec3(1.08, 1.08, 1) }, { easing: 'quadOut' })
+                .to(0.1, { scale: new Vec3(1, 1, 1) }, { easing: 'quadIn' })
+                .start();
+        });
     }
 }
