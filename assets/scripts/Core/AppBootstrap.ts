@@ -6,6 +6,7 @@ import { LocalizationManager } from '../Managers/LocalizationManager';
 import { SaveManager } from '../Managers/SaveManager';
 import { SceneManager } from '../Managers/SceneManager';
 import { SettingsManager } from '../Managers/SettingsManager';
+import { ProgressionManager } from '../Managers/ProgressionManager';
 import { LocalStorageProvider } from '../Services/Storage/LocalStorageProvider';
 import { LevelService } from '../Services/LevelService';
 import { ResourcesLevelProvider } from '../Services/Content/ResourcesLevelProvider';
@@ -23,105 +24,65 @@ import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
     DEFAULT_BOARD_ORIGIN_WORLD_Y,
 } from './Config/GameConstants';
+import { _decorator, Component, director } from 'cc';
+import { ServiceContainer } from './ServiceContainer';
 
-export class AppBootstrap {
-    private readonly eventBus = new EventBus<GameEventMap>();
-    private readonly saveManager = new SaveManager(new LocalStorageProvider());
-    private readonly settingsManager = new SettingsManager(this.saveManager, this.eventBus);
-    private readonly audioManager = new AudioManager();
-    private readonly localizationManager = new LocalizationManager();
-    private readonly sceneManager = new SceneManager();
-    private readonly gameManager = new GameManager(this.eventBus);
-    private readonly levelService = new LevelService(new ResourcesLevelProvider());
-    private readonly imageService = new ImageService(new ResourcesImageLoader());
-    private readonly puzzleManager = new PuzzleManager(
-        this.eventBus,
-        this.gameManager,
-        new PuzzleGenerator(new BacktrackingGenerationStrategy()),
-        new PuzzleValidator(),
-        new SnapSystem(),
-    );
+const { ccclass } = _decorator;
+
+@ccclass('AppBootstrap')
+export class AppBootstrap extends Component {
+    
     private inputManager: InputManager | null = null;
 
-    private settingsSubscription: (() => void) | null = null;
-    private readonly boardOrigin: { x: number; y: number } | null = null;
-    private readonly cellPiecesLayerSize: { x: number; y: number; };
-    private readonly boardLayerSize: { x: number; y: number; };
-
-    public constructor(
-        boardOrigin: {x: number, y: number} | null = null,
-        cellPiecesLayerSize: {x: number, y: number},
-        boardLayerSize: {x: number, y: number}
-    ) {
-        this.boardOrigin = boardOrigin;
-        this.cellPiecesLayerSize = cellPiecesLayerSize;
-        this.boardLayerSize = boardLayerSize;
-        this.settingsSubscription = this.eventBus.on('SettingsChanged', ({ settings }) => {
-            this.audioManager.applySettings(settings);
-            this.localizationManager.setLanguage(settings.language);
-        });
+    public onLoad(): void {
+        director.addPersistRootNode(this.node);
+        this.registryServices();
     }
 
-    public async initialize(): Promise<void> {
-        await this.settingsManager.initialize();
-
-        const levelId = this.levelService.getTrainingLevelId();
-        const levelData = await this.levelService.getLevel(levelId);
-        levelData.gridCellWidth = this.boardLayerSize.x / levelData.gridWidth;
-        levelData.gridCellHeight = this.boardLayerSize.y / levelData.gridHeight;
-        this.eventBus.emit('LevelLoaded', {
-            levelId: levelData.id,
-            gridWidth: levelData.gridWidth,
-            gridHeight: levelData.gridHeight,
-            gridCellWidth: levelData.gridCellWidth,
-            gridCellHeight: levelData.gridCellHeight
-        });
-
-        this.puzzleManager.initializeLevel(levelData);
-        this.inputManager = new InputManager(
-            new DragSystem(
-                this.puzzleManager,
-                {
-                    originWorldX: this.boardOrigin?.x ?? DEFAULT_BOARD_ORIGIN_WORLD_X,
-                    originWorldY: this.boardOrigin?.y ?? DEFAULT_BOARD_ORIGIN_WORLD_Y,
-                    cellSize: { x: levelData.gridCellWidth, y: levelData.gridCellHeight },
-                    gridCellSize: { x: levelData.gridWidth, y: levelData.gridHeight },
-                },
-                levelData.snapThreshold,
-            ),
-            new RotationSystem(this.puzzleManager),
+    private registryServices() {
+        const eventBus = new EventBus<GameEventMap>();
+        const saveManager = new SaveManager(new LocalStorageProvider());
+        const settingsManager = new SettingsManager(saveManager, eventBus);
+        const audioManager = new AudioManager();
+        const localizationManager = new LocalizationManager();
+        const sceneManager = new SceneManager();
+        const gameManager = new GameManager(eventBus);
+        const levelService = new LevelService(new ResourcesLevelProvider());
+        const progressionManager = new ProgressionManager(saveManager, levelService);
+        const imageService = new ImageService(new ResourcesImageLoader());
+        const puzzleManager = new PuzzleManager(
+            eventBus,
+            gameManager,
+            new PuzzleGenerator(new BacktrackingGenerationStrategy()),
+            new PuzzleValidator(),
+            new SnapSystem(),
         );
 
-        this.gameManager.startLevel(levelData.id);
-
-        // Warm-up image loading cache for the active level.
-        await this.imageService.getImage(levelData.imageId).catch(() => {
-            // Placeholder content may be absent at early MVP stages.
-        });
-    }
-
-    public dispose(): void {
-        this.settingsSubscription?.();
-        this.eventBus.clear();
-    }
-
-    public getSceneManager(): SceneManager {
-        return this.sceneManager;
-    }
-
-    public getEventBus(): EventBus<GameEventMap> {
-        return this.eventBus;
-    }
-
-    public getInputManager(): InputManager | null {
-        return this.inputManager;
-    }
-
-    public getPuzzleManager(): PuzzleManager {
-        return this.puzzleManager;
-    }
-
-    public getImageService(): ImageService {
-        return this.imageService;
+        // TODO: Убрать зависиммость от конкретных данных уровня
+        const inputManager = new InputManager(
+            new DragSystem(
+                ServiceContainer.get(PuzzleManager),
+                {
+                    originWorldX: DEFAULT_BOARD_ORIGIN_WORLD_X,
+                    originWorldY: DEFAULT_BOARD_ORIGIN_WORLD_Y,
+                    cellSize: { x: 300, y: 300 },
+                    gridCellSize: { x: 3, y: 3 },
+                },
+                10, // TODO: Убрать зависиммость от конкретных данных уровня
+            ),
+            new RotationSystem(puzzleManager),
+        );
+        
+        ServiceContainer.register(EventBus, eventBus);
+        ServiceContainer.register(SaveManager, saveManager);
+        ServiceContainer.register(SettingsManager, settingsManager);
+        ServiceContainer.register(AudioManager, audioManager);
+        ServiceContainer.register(LocalizationManager, localizationManager);
+        ServiceContainer.register(SceneManager, sceneManager);
+        ServiceContainer.register(GameManager, gameManager);
+        ServiceContainer.register(LevelService, levelService);
+        ServiceContainer.register(ProgressionManager, progressionManager);
+        ServiceContainer.register(ImageService, imageService);
+        ServiceContainer.register(PuzzleManager, puzzleManager);
     }
 }

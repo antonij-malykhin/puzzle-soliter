@@ -1,7 +1,12 @@
 import { ILevelProvider } from '../../Data/Interfaces/ILevelProvider';
 import { LevelData } from '../../Data/Models/LevelData';
+import { LevelCatalogData, LevelCatalogEntry } from '../../Data/Models/LevelCatalog';
 import { JsonAsset, resources } from 'cc';
-import { TRAINING_LEVEL_ID, TRAINING_LEVEL_RESOURCE_PATH } from '../../Core/Config/GameConstants';
+import {
+    LEVEL_CATALOG_RESOURCE_PATH,
+    TRAINING_LEVEL_ID,
+    TRAINING_LEVEL_RESOURCE_PATH,
+} from '../../Core/Config/GameConstants';
 
 export class ResourcesLevelProvider implements ILevelProvider {
     public async getLevel(levelId: string): Promise<LevelData> {
@@ -23,6 +28,30 @@ export class ResourcesLevelProvider implements ILevelProvider {
 
     public getTrainingLevelId(): string {
         return TRAINING_LEVEL_ID;
+    }
+
+    public async getLevelCatalog(): Promise<ReadonlyArray<LevelCatalogEntry>> {
+        const catalog = await new Promise<LevelCatalogData>((resolve, reject) => {
+            resources.load(LEVEL_CATALOG_RESOURCE_PATH, JsonAsset, (error, jsonAsset) => {
+                if (error || !jsonAsset) {
+                    reject(error ?? new Error(`Level catalog json not found: ${LEVEL_CATALOG_RESOURCE_PATH}`));
+                    return;
+                }
+
+                resolve(jsonAsset.json as LevelCatalogData);
+            });
+        });
+
+        const levels = Array.isArray(catalog.levels) ? catalog.levels : [];
+        return levels
+            .filter((entry) => Boolean(entry.levelId))
+            .sort((left, right) => {
+                if (left.gridY !== right.gridY) {
+                    return left.gridY - right.gridY;
+                }
+
+                return left.gridX - right.gridX;
+            });
     }
 
     private resolveLevelPath(levelId: string): string {

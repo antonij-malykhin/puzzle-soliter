@@ -1,0 +1,17 @@
+{
+  "id": "training-003",
+  "gridWidth": 4,
+  "gridHeight": 4,
+  "gridCellWidth": 300,
+  "gridCellHeight": 300,
+  "imageId": "images/training-placeholder/cat/spriteFrame",
+  "gameMode": "rectSwapMerge",
+  "pieceColumns": 4,
+  "pieceRows": 4,
+  "snapThreshold": 10,
+  "minPieceSize": 1,
+  "maxPieceSize": 4,
+  "crossingThresholdFraction": 0.5,
+  "mergeEnabled": true,
+  "allowDisconnectedShapeCells": true
+}

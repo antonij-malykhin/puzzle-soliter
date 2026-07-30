@@ -4,6 +4,7 @@ import { GameEventMap } from '../Core/Events/GameEventMap';
 
 export class GameManager {
     private state = GameState.Idle;
+    private currentLevelId: string | null = null;
 
     public constructor(private readonly eventBus: EventBus<GameEventMap>) {}
 
@@ -12,9 +13,14 @@ export class GameManager {
     }
 
     public startLevel(levelId: string): void {
+        this.currentLevelId = levelId;
         this.transitionTo(GameState.Loading);
         this.eventBus.emit('GameStarted', { levelId });
         this.transitionTo(GameState.Playing);
+    }
+
+    public getCurrentLevelId(): string | null {
+        return this.currentLevelId;
     }
 
     public pause(): void {

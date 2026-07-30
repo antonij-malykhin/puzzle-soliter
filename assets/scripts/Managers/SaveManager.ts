@@ -15,7 +15,21 @@ export class SaveManager {
     }
 
     public async loadProgress(): Promise<GameProgress> {
-        return (await this.storageProvider.getItem<GameProgress>(SAVE_PROGRESS_KEY)) ?? createDefaultGameProgress();
+        const stored = await this.storageProvider.getItem<Partial<GameProgress>>(SAVE_PROGRESS_KEY);
+        const defaults = createDefaultGameProgress();
+        if (!stored) {
+            return defaults;
+        }
+
+        return {
+            completedLevelIds: Array.isArray(stored.completedLevelIds)
+                ? [...stored.completedLevelIds]
+                : defaults.completedLevelIds,
+            starsByLevel: stored.starsByLevel ?? defaults.starsByLevel,
+            bestTimeByLevelSeconds: stored.bestTimeByLevelSeconds ?? defaults.bestTimeByLevelSeconds,
+            currentLevelId: stored.currentLevelId ?? defaults.currentLevelId,
+            recentlyCompletedLevelId: stored.recentlyCompletedLevelId ?? defaults.recentlyCompletedLevelId,
+        };
     }
 
     public async saveProgress(progress: GameProgress): Promise<void> {
