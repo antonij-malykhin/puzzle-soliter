@@ -1,10 +1,11 @@
+import { BoardProjectionConfig } from '../Input/PointerTypes';
 import { CellCoordinate } from '../Puzzle/Types';
 
 export interface BoardCoordinateMapperConfig {
     readonly boardCenterWorldX: number;
     readonly boardCenterWorldY: number;
     readonly cellSize: {x: number; y: number};
-    readonly gridSize: {x: number; y: number};
+    readonly gridDimentionSize: {x: number; y: number};
 }
 
 export interface WorldCoordinate {
@@ -13,14 +14,23 @@ export interface WorldCoordinate {
 }
 
 export class BoardCoordinateMapper {
-    public constructor(private readonly config: BoardCoordinateMapperConfig) {}
-
-    public getGridWidth(): number {
-        return this.config.gridSize.x;
+    public constructor(private config: BoardCoordinateMapperConfig) {}
+    
+    public updateProjection(projection: BoardProjectionConfig) {
+        this.config = {
+            boardCenterWorldX: projection.originWorldX,
+            boardCenterWorldY: projection.originWorldY,
+            cellSize: projection.cellSize,
+            gridDimentionSize: projection.gridDimentionSize,
+        };
     }
 
-    public getGridHeight(): number {
-        return this.config.gridSize.y;
+    public getGridColumnCount(): number {
+        return this.config.gridDimentionSize.x;
+    }
+
+    public getGridRowCount(): number {
+        return this.config.gridDimentionSize.y;
     }
 
     public getCellSize(): {x: number; y: number} {
@@ -28,11 +38,11 @@ export class BoardCoordinateMapper {
     }
 
     public getFullWidth(): number {
-        return this.config.gridSize.x * this.config.cellSize.x;
+        return this.config.gridDimentionSize.x * this.config.cellSize.x;
     }
 
     public getFullHeight(): number {
-        return this.config.gridSize.y * this.config.cellSize.y;
+        return this.config.gridDimentionSize.y * this.config.cellSize.y;
     }
 
     public getTopLeftWorld(): WorldCoordinate {

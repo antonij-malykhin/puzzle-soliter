@@ -24,19 +24,25 @@ import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
     DEFAULT_BOARD_ORIGIN_WORLD_Y,
 } from './Config/GameConstants';
-import { _decorator, Component, director } from 'cc';
+import { _decorator, Component, director, UITransform } from 'cc';
 import { ServiceContainer } from './ServiceContainer';
+import { AppConfigService } from '../Services/AppConfigService';
 
 const { ccclass } = _decorator;
 
 @ccclass('AppBootstrap')
 export class AppBootstrap extends Component {
-    
-    private inputManager: InputManager | null = null;
 
-    public onLoad(): void {
+    public async onLoad(): Promise<void> {
         director.addPersistRootNode(this.node);
         this.registryServices();
+        await this.initializeServices();
+        await ServiceContainer.get(SceneManager).loadLobbyScene();
+    }
+
+    private async initializeServices() {
+        await ServiceContainer.get(SettingsManager).initialize();
+        await ServiceContainer.get(ProgressionManager).initialize();
     }
 
     private registryServices() {
@@ -50,6 +56,7 @@ export class AppBootstrap extends Component {
         const levelService = new LevelService(new ResourcesLevelProvider());
         const progressionManager = new ProgressionManager(saveManager, levelService);
         const imageService = new ImageService(new ResourcesImageLoader());
+        const appConfigService = new AppConfigService();
         const puzzleManager = new PuzzleManager(
             eventBus,
             gameManager,
@@ -58,21 +65,21 @@ export class AppBootstrap extends Component {
             new SnapSystem(),
         );
 
-        // TODO: Убрать зависиммость от конкретных данных уровня
         const inputManager = new InputManager(
             new DragSystem(
-                ServiceContainer.get(PuzzleManager),
+                puzzleManager,
                 {
                     originWorldX: DEFAULT_BOARD_ORIGIN_WORLD_X,
                     originWorldY: DEFAULT_BOARD_ORIGIN_WORLD_Y,
                     cellSize: { x: 300, y: 300 },
-                    gridCellSize: { x: 3, y: 3 },
+                    gridDimentionSize: { x: 3, y: 3 },
                 },
-                10, // TODO: Убрать зависиммость от конкретных данных уровня
+                10,
             ),
             new RotationSystem(puzzleManager),
         );
         
+        ServiceContainer.register(InputManager, inputManager);
         ServiceContainer.register(EventBus, eventBus);
         ServiceContainer.register(SaveManager, saveManager);
         ServiceContainer.register(SettingsManager, settingsManager);
@@ -84,5 +91,6 @@ export class AppBootstrap extends Component {
         ServiceContainer.register(ProgressionManager, progressionManager);
         ServiceContainer.register(ImageService, imageService);
         ServiceContainer.register(PuzzleManager, puzzleManager);
+        ServiceContainer.register(AppConfigService, appConfigService);
     }
 }

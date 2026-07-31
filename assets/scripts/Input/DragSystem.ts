@@ -15,8 +15,12 @@ export class DragSystem {
             boardCenterWorldX: projection.originWorldX,
             boardCenterWorldY: projection.originWorldY,
             cellSize: projection.cellSize,
-            gridSize: projection.gridCellSize,
+            gridDimentionSize: projection.gridDimentionSize,
         });
+    }
+
+    public updateProjection(projection: BoardProjectionConfig): void {
+        this.mapper.updateProjection(projection);
     }
 
     public dropPiece(pieceId: string, worldPosition: PointerWorldPosition): boolean {

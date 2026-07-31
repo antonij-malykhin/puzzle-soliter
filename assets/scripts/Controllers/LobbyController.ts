@@ -1,7 +1,6 @@
-import { Component } from 'cc';
 import { LobbyUI } from '../UI/Screens/LobbyUI';
 
-export class LobbyController extends Component {
+export class LobbyController {
     private lobbyUI!: LobbyUI;
 
     async initialize(lobbyUI: LobbyUI, options: { onPlayRequested: () => void; lobbyCards: ReadonlyArray<any>; imageService: any; }) {

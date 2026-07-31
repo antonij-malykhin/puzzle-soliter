@@ -34,15 +34,15 @@ export class PuzzleManager {
         this.levelData = levelData;
         this.levelId = levelData.id;
         this.levelStartedAtMs = Date.now();
-        this.board = new PuzzleBoard(levelData.gridWidth, levelData.gridHeight, this.validator);
+        this.board = new PuzzleBoard(levelData.gridColumnCount, levelData.gridRowCount, this.validator);
         this.pieces.clear();
         this.groupParentByPieceId.clear();
 
         const generatedPieces = this.isRectSwapMergeMode()
             ? this.generateRectangularPieces(levelData)
             : this.generator.generate({
-                gridWidth: levelData.gridWidth,
-                gridHeight: levelData.gridHeight,
+                gridWidth: levelData.gridColumnCount,
+                gridHeight: levelData.gridRowCount,
                 minPieceSize: levelData.minPieceSize,
                 maxPieceSize: levelData.maxPieceSize,
                 allowDisconnectedShapeCells: levelData.allowDisconnectedShapeCells,
@@ -182,14 +182,14 @@ export class PuzzleManager {
             throw new Error('rectSwapMerge mode requires positive pieceColumns and pieceRows in level data.');
         }
 
-        if ((levelData.gridWidth % pieceColumns) !== 0 || (levelData.gridHeight % pieceRows) !== 0) {
+        if ((levelData.gridColumnCount % pieceColumns) !== 0 || (levelData.gridRowCount % pieceRows) !== 0) {
             throw new Error(
-                `Grid ${levelData.gridWidth}x${levelData.gridHeight} cannot be evenly sliced into ${pieceColumns}x${pieceRows} pieces.`,
+                `Grid ${levelData.gridColumnCount}x${levelData.gridRowCount} cannot be evenly sliced into ${pieceColumns}x${pieceRows} pieces.`,
             );
         }
 
-        const pieceWidth = levelData.gridWidth / pieceColumns;
-        const pieceHeight = levelData.gridHeight / pieceRows;
+        const pieceWidth = levelData.gridColumnCount / pieceColumns;
+        const pieceHeight = levelData.gridRowCount / pieceRows;
         const definitions: GeneratedPieceDefinition[] = [];
         let pieceIndex = 0;
         for (let pieceRow = 0; pieceRow < pieceRows; pieceRow += 1) {

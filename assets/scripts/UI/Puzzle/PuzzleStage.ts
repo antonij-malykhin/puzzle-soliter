@@ -180,14 +180,14 @@ export class PuzzleStage extends Component {
             return;
         }
 
-        const gridWidth = mapper.getGridWidth();
-        const gridHeight = mapper.getGridHeight();
+        const gridColumnCount = mapper.getGridColumnCount();
+        const gridRowCount = mapper.getGridRowCount();
         const cellSize = mapper.getCellSize();
         const fullWidth = mapper.getFullWidth();
         const fullHeight = mapper.getFullHeight();
         const topLeft = mapper.getTopLeftWorld();
 
-        for (let index = 0; index <= gridWidth; index += 1) {
+        for (let index = 0; index <= gridColumnCount; index += 1) {
             const offset = index * cellSize.x;
             const verticalX = topLeft.x + offset;
 
@@ -195,7 +195,7 @@ export class PuzzleStage extends Component {
             graphics.lineTo(verticalX, topLeft.y - fullHeight);
         }
 
-        for (let index = 0; index <= gridHeight; index += 1) {
+        for (let index = 0; index <= gridRowCount; index += 1) {
             const offset = index * cellSize.y;
             const horizontalY = topLeft.y - offset;
             graphics.moveTo(topLeft.x, horizontalY);
@@ -279,8 +279,8 @@ export class PuzzleStage extends Component {
             ? {
                 sourceSpriteFrame,
                 targetOrigin: piece.getTargetOrigin(),
-                gridWidth: levelData.gridWidth,
-                gridHeight: levelData.gridHeight,
+                gridWidth: levelData.gridColumnCount,
+                gridHeight: levelData.gridRowCount,
             }
             : undefined);
             
@@ -554,7 +554,7 @@ export class PuzzleStage extends Component {
                 x: this.puzzleManager?.getLevelData()?.gridCellWidth ?? 24,
                 y: this.puzzleManager?.getLevelData()?.gridCellHeight ?? 24,
             },
-            gridSize: {
+            gridDimentionSize: {
                 x: board.getGridWidth(),
                 y: board.getGridHeight(),
             },

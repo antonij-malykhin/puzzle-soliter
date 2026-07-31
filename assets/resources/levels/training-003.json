@@ -1,7 +1,7 @@
 {
   "id": "training-003",
-  "gridWidth": 4,
-  "gridHeight": 4,
+  "gridColumnCount": 4,
+  "gridRowCount": 4,
   "gridCellWidth": 300,
   "gridCellHeight": 300,
   "imageId": "images/training-placeholder/cat/spriteFrame",

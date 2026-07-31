@@ -7,5 +7,5 @@ export interface BoardProjectionConfig {
     originWorldX: number;
     originWorldY: number;
     cellSize: {x: number; y: number};
-    gridCellSize: {x: number; y: number};
+    gridDimentionSize: {x: number; y: number};
 }

@@ -35,11 +35,11 @@ export class GameplayUI extends Component {
         this.victoryUI.setNextHandler(options.onVictoryNextRequested);
         this.victoryUI.setRestartHandler(options.onVictoryRestartRequested);
 
-        this.disposables.push(eventBus.on('GameStarted', async ({ levelId }) => {
+        this.disposables.push(eventBus.on('GameStarted', ({ levelId }) => {
             this.gameUI?.setLevel(levelId);
-            await this.victoryUI.hide();
-            await this.pauseUI.hide();
-            await this.gameUI.show();
+            this.victoryUI.hide();
+            this.pauseUI.hide();
+            this.gameUI.show();
         }));
 
         this.disposables.push(eventBus.on('GameStateChanged', async ({ current }) => {
