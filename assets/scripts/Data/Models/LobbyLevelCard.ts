@@ -7,5 +7,5 @@ export interface LobbyLevelCard {
     isCompleted: boolean;
     isCurrent: boolean;
     shouldAnimateFlip: boolean;
-    cardImageId?: string;
+    cardBackFrontImageId: string | null;
 }

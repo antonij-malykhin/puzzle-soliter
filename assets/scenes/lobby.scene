@@ -465,7 +465,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": -25,
+      "y": 25,
       "z": 0
     },
     "_lrot": {
@@ -567,7 +567,7 @@
     "value": {
       "__type__": "cc.Vec3",
       "x": -440,
-      "y": 975,
+      "y": 925,
       "z": 0
     }
   },
@@ -615,7 +615,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 980,
-      "height": 2050
+      "height": 1950
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -650,8 +650,8 @@
     "_spacingY": 0,
     "_verticalDirection": 1,
     "_horizontalDirection": 0,
-    "_constraint": 0,
-    "_constraintNum": 2,
+    "_constraint": 2,
+    "_constraintNum": 5,
     "_affectedByScale": false,
     "_isAlign": false,
     "_id": "57x/TR/FpK2pmuOf1oXSX6"
@@ -671,7 +671,7 @@
     "_left": 50,
     "_right": 50,
     "_top": 200,
-    "_bottom": 150,
+    "_bottom": 250,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -718,7 +718,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": -980,
+      "y": -1062.551,
       "z": 0
     },
     "_lrot": {
@@ -1016,7 +1016,7 @@
     "_left": 0,
     "_right": 0,
     "_top": 0,
-    "_bottom": 145,
+    "_bottom": 62.44900000000007,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -1190,6 +1190,9 @@
     "__prefab": null,
     "lobbyUI": {
       "__id__": 32
+    },
+    "lobbyLevelCardRootUiTransform": {
+      "__id__": 19
     },
     "_id": "01jbG3LPlBQpXOnM/xb8LS"
   },

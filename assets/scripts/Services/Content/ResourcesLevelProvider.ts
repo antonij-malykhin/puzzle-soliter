@@ -30,11 +30,11 @@ export class ResourcesLevelProvider implements ILevelProvider {
         return TRAINING_LEVEL_ID;
     }
 
-    public async getLevelCatalog(): Promise<ReadonlyArray<LevelCatalogEntry>> {
+    public async getLevelCatalog(regionNumber: number): Promise<LevelCatalogData> {
         const catalog = await new Promise<LevelCatalogData>((resolve, reject) => {
-            resources.load(LEVEL_CATALOG_RESOURCE_PATH, JsonAsset, (error, jsonAsset) => {
+            resources.load(LEVEL_CATALOG_RESOURCE_PATH + "-" + regionNumber, JsonAsset, (error, jsonAsset) => {
                 if (error || !jsonAsset) {
-                    reject(error ?? new Error(`Level catalog json not found: ${LEVEL_CATALOG_RESOURCE_PATH}`));
+                    reject(error ?? new Error(`Level catalog json not found: ${LEVEL_CATALOG_RESOURCE_PATH + "-" + regionNumber}`));
                     return;
                 }
 
@@ -43,15 +43,18 @@ export class ResourcesLevelProvider implements ILevelProvider {
         });
 
         const levels = Array.isArray(catalog.levels) ? catalog.levels : [];
-        return levels
-            .filter((entry) => Boolean(entry.levelId))
-            .sort((left, right) => {
-                if (left.gridY !== right.gridY) {
-                    return left.gridY - right.gridY;
-                }
+        return {
+            regionImageId: catalog.regionImageId,
+            levels: levels
+                .filter((entry) => Boolean(entry.levelId))
+                .sort((left, right) => {
+                    if (left.gridY !== right.gridY) {
+                        return left.gridY - right.gridY;
+                    }
 
-                return left.gridX - right.gridX;
-            });
+                    return left.gridX - right.gridX;
+                }),
+        };
     }
 
     private resolveLevelPath(levelId: string): string {

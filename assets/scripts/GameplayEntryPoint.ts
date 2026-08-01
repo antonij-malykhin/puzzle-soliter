@@ -16,6 +16,7 @@ import { GameplayController } from './Controllers/GameplayController';
 import { LevelData } from './Data/Models/LevelData';
 import { SceneManager } from './Managers/SceneManager';
 import { GameplayUI } from './UI/GameplayUI';
+import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
 
 const { ccclass, property } = _decorator;
 
@@ -44,7 +45,8 @@ export class GameplayEntryPoint extends Component {
     private boardLayerSize: { x: number; y: number } | null = null;
     private levelData!: LevelData;
     private boardOrigine!: { x: number; y: number; };
-
+    private spriteFrameSliceService!: SpriteFrameSliceService;
+    
     protected async start(): Promise<void> {
         PerformanceMonitor.clear();
         PerformanceMonitor.setEnabled(true);
@@ -63,6 +65,7 @@ export class GameplayEntryPoint extends Component {
             this.inputManager,
             this.eventBus!,
             this.imageService,
+            this.spriteFrameSliceService
         );
         
         
@@ -105,6 +108,7 @@ export class GameplayEntryPoint extends Component {
     }
 
     private requestServices() {
+        this.spriteFrameSliceService = ServiceContainer.get(SpriteFrameSliceService);
         this.gameplayController = new GameplayController();
         this.sceneManager = ServiceContainer.get(SceneManager);
         this.progressionManager = ServiceContainer.get(ProgressionManager);

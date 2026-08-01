@@ -9,9 +9,8 @@ import {
 	Vec3,
 } from 'cc';
 
-import { ImageService } from '../../Services/ImageService';
 import { UIView } from '../Base/UIView';
-import { LobbyLevelCard } from '../../Data/Models/LobbyLevelCard';
+import { LobbyLevelCardPresentation } from '../../Data/Models/LobbyLevelCardPresentation';
 import { LobbyLevelCardUI } from './LobbyLevelCardUI';
 
 const { ccclass, property } = _decorator;
@@ -44,14 +43,14 @@ export class LobbyUI extends UIView {
 		this.playHandler = handler;
 	}
 
-	public async setCards(cards: ReadonlyArray<LobbyLevelCard>, imageService: ImageService): Promise<void> {
+	public async setCards(cards: ReadonlyArray<LobbyLevelCardPresentation>): Promise<void> {
 		if (!this.gridRoot) {
 			throw new Error('Grid root is not set.');
 		}
 
 		this.gridRoot.removeAllChildren();
 		for (const card of cards) {
-			await this.createCardNode(card, this.cardPrefab!, imageService);
+			await this.createCardNode(card, this.cardPrefab!);
 		}
 
 		const currentCard = cards.find((card) => card.isCurrent);
@@ -73,7 +72,7 @@ export class LobbyUI extends UIView {
 		this.playHandler?.();
 	}
 
-	private async createCardNode(card: LobbyLevelCard, cardPrefab: Prefab, imageService: ImageService): Promise<void> {
+	private async createCardNode(card: LobbyLevelCardPresentation, cardPrefab: Prefab): Promise<void> {
 		if (!this.gridRoot) {
 			throw new Error('Grid root is not set.');
 		}
@@ -82,34 +81,7 @@ export class LobbyUI extends UIView {
 		const lobbyCardComponent = cardNode.getComponent(LobbyLevelCardUI);
 		cardNode.name = `LevelCard_${card.levelId}`;
 		cardNode.setParent(this.gridRoot);
-		let completedSpriteFrame = null;
-		let placeholderSpriteFrame = null;
-
-		if (card.isCompleted && card.cardImageId) {
-			try {
-				completedSpriteFrame = await imageService.getImage(card.cardImageId);
-			} catch {
-				throw new Error(`Failed to load image for card with ID: ${card.cardImageId}`);
-			}
-		}
-
-		if (!card.isCompleted && card.cardImageId) {
-			try {
-				placeholderSpriteFrame = await imageService.getImage(card.cardImageId);
-			} catch {
-				throw new Error(`Failed to load image for card with ID: ${card.cardImageId}`);
-			}
-		}
-
-		if (card.isCompleted && !card.shouldAnimateFlip) {
-			lobbyCardComponent!.applyFrontSide(completedSpriteFrame);
-		} else {
-			lobbyCardComponent!.applyBackSide(placeholderSpriteFrame);
-		}
-
-		if (card.isCompleted && !card.shouldAnimateFlip) {
-			lobbyCardComponent!.setLevelNumberLabel('');
-		}
+		lobbyCardComponent!.render(card);
 
 		if (card.isCompleted && card.shouldAnimateFlip) {
 			await this.playCompletedFlipAnimation(cardNode);

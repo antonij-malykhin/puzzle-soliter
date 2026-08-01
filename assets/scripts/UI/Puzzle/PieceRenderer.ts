@@ -1,6 +1,7 @@
-import { _decorator, Color, Component, Graphics, log, Node, Rect, Size, Sprite, SpriteFrame, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, log, Node, Sprite, SpriteFrame, UITransform } from 'cc';
 import { Shape } from '../../Puzzle/Shape';
 import { CellCoordinate } from '../../Puzzle/Types';
+import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
 
 const { ccclass, property } = _decorator;
 
@@ -30,15 +31,21 @@ export class PieceRenderer extends Component {
     
     @property(UITransform)
     private uiTransform: UITransform | null = null;
-
+    
     @property(Graphics)
     private graphics: Graphics | null = null;
     
     @property
     private placeholderCellSize: {x: number; y: number} = {x: 100, y: 100};
-
+    
     @property(SpriteFrame)
     private defaultSpriteFrame: SpriteFrame | null = null;
+    
+    private spriteFrameSliceService!: SpriteFrameSliceService;
+
+    public initialize(spriteFrameSliceService: SpriteFrameSliceService) {
+        this.spriteFrameSliceService = spriteFrameSliceService;
+    }
     
     public render(pieceId: string, shape: Shape, imageSliceOptions?: PieceImageSliceOptions): void {
         this.ensureSprite();
@@ -80,44 +87,6 @@ export class PieceRenderer extends Component {
         return new Color(red, green, blue, MAX_COLOR_CHANNEL_VALUE);
     }
 
-    private applyCellMarkup(shape: Shape, fillColor: Color): void {
-        const graphics = this.graphics;
-        if (!graphics) {
-            return;
-        }
-
-        const cells = shape.getCells();
-        const bounds = this.getShapeBounds(cells);
-        const pieceWidth = bounds.width * this.placeholderCellSize.x;
-        const pieceHeight = bounds.height * this.placeholderCellSize.y;
-        const left = 0;
-        const bottom = -pieceHeight;
-        const strokeColor = this.darkenColor(fillColor, OUTLINE_DARKEN_STEP);
-
-        graphics.clear();
-        graphics.fillColor = fillColor;
-        graphics.strokeColor = strokeColor;
-
-        cells.forEach((cell) => {
-            const x = left + cell.x * this.placeholderCellSize.x;
-            const y = bottom + cell.y * this.placeholderCellSize.y;
-
-            graphics.rect(x, y, this.placeholderCellSize.x, this.placeholderCellSize.y);
-            graphics.fill();
-            graphics.rect(x, y, this.placeholderCellSize.x, this.placeholderCellSize.y);
-            graphics.stroke();
-        });
-    }
-
-    private darkenColor(color: Color, amount: number): Color {
-        return new Color(
-            Math.max(0, color.r - amount),
-            Math.max(0, color.g - amount),
-            Math.max(0, color.b - amount),
-            0,
-        );
-    }
-
     private getShapeBounds(cells: ReadonlyArray<{ x: number; y: number }>): { width: number; height: number } {
         const minX = Math.min(...cells.map((cell) => cell.x));
         const minY = Math.min(...cells.map((cell) => cell.y));
@@ -150,7 +119,13 @@ export class PieceRenderer extends Component {
             cellSprite.type = Sprite.Type.SIMPLE;
 
             const slicedSpriteFrame = imageSliceOptions
-                ? this.createSlicedCellSpriteFrame(imageSliceOptions, cell.x, cell.y)
+                ? this.spriteFrameSliceService.sliceGridCell({
+                    sourceSpriteFrame: imageSliceOptions.sourceSpriteFrame,
+                    gridWidth: imageSliceOptions.gridWidth,
+                    gridHeight: imageSliceOptions.gridHeight,
+                    cellX: imageSliceOptions.targetOrigin.x + cell.x,
+                    cellY: imageSliceOptions.targetOrigin.y + cell.y,
+                })
                 : null;
             cellSprite.spriteFrame = slicedSpriteFrame ?? this.defaultSpriteFrame;
             cellSprite.color = slicedSpriteFrame ? Color.WHITE : fallbackColor;
@@ -161,35 +136,4 @@ export class PieceRenderer extends Component {
         }
     }
 
-    private createSlicedCellSpriteFrame(
-        options: PieceImageSliceOptions,
-        localCellX: number,
-        localCellY: number,
-    ): SpriteFrame | null {
-        const { sourceSpriteFrame, targetOrigin, gridWidth, gridHeight } = options;
-        if (gridWidth <= 0 || gridHeight <= 0 || !sourceSpriteFrame.texture) {
-            return null;
-        }
-
-        const absoluteCellX = targetOrigin.x + localCellX;
-        const absoluteCellY = targetOrigin.y + localCellY;
-        if (absoluteCellX < 0 || absoluteCellX >= gridWidth || absoluteCellY < 0 || absoluteCellY >= gridHeight) {
-            return null;
-        }
-
-        const sourceRect = sourceSpriteFrame.rect;
-        const sourceCellWidth = sourceRect.width / gridWidth;
-        const sourceCellHeight = sourceRect.height / gridHeight;
-
-        // Align source image rows with board rows directly to avoid vertical flipping.
-        const sourceX = sourceRect.x + absoluteCellX * sourceCellWidth;
-        const sourceY = sourceRect.y + absoluteCellY * sourceCellHeight;
-
-        const slicedSpriteFrame = new SpriteFrame();
-        slicedSpriteFrame.texture = sourceSpriteFrame.texture;
-        slicedSpriteFrame.rect = new Rect(sourceX, sourceY, sourceCellWidth, sourceCellHeight);
-        slicedSpriteFrame.originalSize = new Size(sourceCellWidth, sourceCellHeight);
-
-        return slicedSpriteFrame;
-    }
 }

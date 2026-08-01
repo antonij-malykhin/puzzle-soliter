@@ -1,5 +1,5 @@
 import { ILevelProvider } from '../Data/Interfaces/ILevelProvider';
-import { LevelCatalogEntry } from '../Data/Models/LevelCatalog';
+import { LevelCatalogData } from '../Data/Models/LevelCatalog';
 import { LevelData } from '../Data/Models/LevelData';
 
 export class LevelService {
@@ -13,12 +13,12 @@ export class LevelService {
         return this.levelProvider.getLevel(levelId);
     }
 
-    public getLevelCatalog(): Promise<ReadonlyArray<LevelCatalogEntry>> {
-        return this.levelProvider.getLevelCatalog();
+    public getLevelCatalog(regionNumber: number): Promise<LevelCatalogData> {
+        return this.levelProvider.getLevelCatalog(regionNumber);
     }
 
-    public async getOrderedLevelIds(): Promise<ReadonlyArray<string>> {
-        const catalog = await this.getLevelCatalog();
-        return catalog.map((entry) => entry.levelId);
+    public async getOrderedLevelIds(regionNumber: number): Promise<ReadonlyArray<string>> {
+        const catalog = await this.getLevelCatalog(regionNumber);
+        return catalog.levels.map((entry) => entry.levelId);
     }
 }

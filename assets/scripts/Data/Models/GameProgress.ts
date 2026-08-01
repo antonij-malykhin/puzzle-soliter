@@ -4,6 +4,7 @@ export interface GameProgress {
     bestTimeByLevelSeconds: Record<string, number>;
     currentLevelId: string | null;
     recentlyCompletedLevelId: string | null;
+    regionNumber: number;
 }
 
 export const createDefaultGameProgress = (): GameProgress => ({
@@ -12,4 +13,5 @@ export const createDefaultGameProgress = (): GameProgress => ({
     bestTimeByLevelSeconds: {},
     currentLevelId: null,
     recentlyCompletedLevelId: null,
+    regionNumber: 1,
 });

@@ -3,9 +3,10 @@ export interface LevelCatalogEntry {
     levelNumber: number;
     gridX: number;
     gridY: number;
-    cardImageId?: string;
+    cardBackFrontImageId: string;
 }
 
 export interface LevelCatalogData {
+    regionImageId: string;
     levels: LevelCatalogEntry[];
 }

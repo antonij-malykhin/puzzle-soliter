@@ -13,7 +13,7 @@ export class ProgressionManager {
 
     public async initialize(): Promise<void> {
         this.progress = await this.saveManager.loadProgress();
-        this.orderedLevelIds = [...(await this.levelService.getOrderedLevelIds())];
+        this.orderedLevelIds = [...(await this.levelService.getOrderedLevelIds(this.progress.regionNumber))];
 
         if (this.orderedLevelIds.length === 0) {
             this.orderedLevelIds = [this.levelService.getTrainingLevelId()];
@@ -28,6 +28,10 @@ export class ProgressionManager {
 
     public getOrderedLevelIds(): ReadonlyArray<string> {
         return this.orderedLevelIds;
+    }
+
+    public getCurrentRegionNumber(): number {
+        return this.requireProgress().regionNumber;
     }
 
     public getCurrentLevelId(): string {
@@ -103,6 +107,7 @@ export class ProgressionManager {
             bestTimeByLevelSeconds: { ...progress.bestTimeByLevelSeconds },
             currentLevelId: progress.currentLevelId,
             recentlyCompletedLevelId: progress.recentlyCompletedLevelId,
+            regionNumber: progress.regionNumber,
         };
     }
 

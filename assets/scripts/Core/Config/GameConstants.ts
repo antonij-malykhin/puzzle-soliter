@@ -19,4 +19,4 @@ export const GAMEPLAY_SCENE_NAME = 'gameplay';
 export const LOBBY_SCENE_NAME = 'lobby';
 export const TRAINING_LEVEL_ID = 'training-001';
 export const TRAINING_LEVEL_RESOURCE_PATH = 'levels/training-001';
-export const LEVEL_CATALOG_RESOURCE_PATH = 'levels/manifest';
+export const LEVEL_CATALOG_RESOURCE_PATH = 'levels/region';

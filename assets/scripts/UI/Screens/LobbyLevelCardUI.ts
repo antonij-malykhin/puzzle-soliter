@@ -1,4 +1,5 @@
-import { _decorator, Component, Label, Sprite, SpriteFrame } from 'cc';
+import { _decorator, Component, Label, Sprite, SpriteFrame, UITransform } from 'cc';
+import { LobbyLevelCardPresentation } from '../../Data/Models/LobbyLevelCardPresentation';
 
 const { ccclass, property } = _decorator;
 
@@ -13,26 +14,42 @@ export class LobbyLevelCardUI extends Component {
     @property(Label)
     public levelNumberLabel: Label | null = null;
 
-	public setLevelNumberLabel(levelNumber: string) {
+	@property(UITransform)
+	public uiTransform: UITransform | null = null;
+
+	public render(card: LobbyLevelCardPresentation): void {
+		this.setLevelNumberLabel(card.isCompleted && !card.shouldAnimateFlip ? '' : `${card.levelNumber}`);
+
+		if (card.isCompleted && !card.shouldAnimateFlip) {
+			this.applyFrontSide(card.frontSpriteFrame);
+			this.uiTransform?.setContentSize(card.width, card.height);
+			return;
+		}
+
+		this.applyBackSide(card.backSpriteFrame);
+		this.uiTransform?.setContentSize(card.width, card.height);
+	}
+
+	public setLevelNumberLabel(levelNumber: string): void {
 		this.levelNumberLabel!.string = levelNumber;
 	}
 
-	public applyBackSide(placeholderSpriteFrame: SpriteFrame | null) {
-        if (!placeholderSpriteFrame) {
-            throw new Error('Placeholder sprite frame is not provided.');
-        }
+	public applyBackSide(backSpriteFrame: SpriteFrame | null): void {
 		this.backsideSprite!.node.active = true;
 		this.frontsideSprite!.node.active = false;
-		this.backsideSprite!.spriteFrame = placeholderSpriteFrame;
+
+		if (backSpriteFrame) {
+			this.backsideSprite!.spriteFrame = backSpriteFrame;
+		}
 	}
 
-	public applyFrontSide(completedSpriteFrame: SpriteFrame | null) {
-        if (!completedSpriteFrame) {
-            throw new Error('Completed sprite frame is not provided.');
-        }
+	public applyFrontSide(frontSpriteFrame: SpriteFrame | null): void {
+		if (!frontSpriteFrame) {
+			throw new Error('Front sprite frame is not provided.');
+		}
 
 		this.backsideSprite!.node.active = false;
 		this.frontsideSprite!.node.active = true;
-		this.frontsideSprite!.spriteFrame = completedSpriteFrame;
+		this.frontsideSprite!.spriteFrame = frontSpriteFrame;
 	}
 }

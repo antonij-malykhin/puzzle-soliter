@@ -37,6 +37,7 @@ import { ImageService } from '../../Services/ImageService';
 import { PieceNodePool } from '../../Utils/PieceNodePool';
 import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
 import { BoardCoordinateMapper } from '../../Utils/BoardCoordinateMapper';
+import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
 
 const { ccclass, property } = _decorator;
 const TOP_LEFT_ANCHOR_X = 0;
@@ -67,24 +68,28 @@ export class PuzzleStage extends Component {
     private activePieceId: string | null = null;
     private activeDragGroupPieceIds: string[] = [];
     private lastPointerPosition: Vec2 | null = null;
+    private spriteFrameSliceService!: SpriteFrameSliceService;
 
     @property(Node)
     private touchInputNode: Node | null = null; // обычно Content/Viewport ScrollView
 
     @property(ScrollView)
     private pieceScrollView: ScrollView | null = null;
+    
 
     public initialize(
         puzzleManager: PuzzleManager,
         inputManager: InputManager,
         eventBus: EventBus<GameEventMap>,
         imageService: ImageService,
+        spriteFrameSliceService: SpriteFrameSliceService
     ): void {
         this.dispose();
 
         this.inputManager = inputManager;
         this.puzzleManager = puzzleManager;
         this.imageService = imageService;
+        this.spriteFrameSliceService = spriteFrameSliceService;
         this.imageRenderer = new ImageBoardRenderer(imageService);
         this.pieceNodePool = new PieceNodePool(32, this.piecePrefab); // Pool up to 32 pieces
         this.ensureLayers();
@@ -274,6 +279,7 @@ export class PuzzleStage extends Component {
             pieceNode.name = `Piece_${piece.getId()}`;
             pieceNode.setParent(this.pieceTrayLayer);
             this.ensureTopLeftAnchor(pieceNode);
+            pieceRenderer.initialize(this.spriteFrameSliceService);
             pieceRenderer.setCellSize({x: levelData.gridCellWidth, y: levelData.gridCellHeight});
             pieceRenderer.render(piece.getId(), piece.getBaseShape(), sourceSpriteFrame
             ? {

@@ -29,6 +29,7 @@ export class SaveManager {
             bestTimeByLevelSeconds: stored.bestTimeByLevelSeconds ?? defaults.bestTimeByLevelSeconds,
             currentLevelId: stored.currentLevelId ?? defaults.currentLevelId,
             recentlyCompletedLevelId: stored.recentlyCompletedLevelId ?? defaults.recentlyCompletedLevelId,
+            regionNumber: typeof stored.regionNumber === 'number' ? stored.regionNumber : defaults.regionNumber,
         };
     }
 

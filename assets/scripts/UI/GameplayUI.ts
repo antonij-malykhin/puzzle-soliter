@@ -33,7 +33,6 @@ export class GameplayUI extends Component {
     ): Promise<void> {
         
         this.victoryUI.setNextHandler(options.onVictoryNextRequested);
-        this.victoryUI.setRestartHandler(options.onVictoryRestartRequested);
 
         this.disposables.push(eventBus.on('GameStarted', ({ levelId }) => {
             this.gameUI?.setLevel(levelId);
@@ -62,7 +61,6 @@ export class GameplayUI extends Component {
         }));
 
         this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, elapsedSeconds }) => {
-            this.victoryUI.setResult(levelId, elapsedSeconds);
             await this.victoryUI.show();
         }));
 

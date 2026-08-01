@@ -27,6 +27,7 @@ import {
 import { _decorator, Component, director, UITransform } from 'cc';
 import { ServiceContainer } from './ServiceContainer';
 import { AppConfigService } from '../Services/AppConfigService';
+import { SpriteFrameSliceService } from '../Services/SpriteFrameSliceService';
 
 const { ccclass } = _decorator;
 
@@ -46,6 +47,7 @@ export class AppBootstrap extends Component {
     }
 
     private registryServices() {
+        const spriteFrameSliceService = new SpriteFrameSliceService();
         const eventBus = new EventBus<GameEventMap>();
         const saveManager = new SaveManager(new LocalStorageProvider());
         const settingsManager = new SettingsManager(saveManager, eventBus);
@@ -86,6 +88,7 @@ export class AppBootstrap extends Component {
         ServiceContainer.register(AudioManager, audioManager);
         ServiceContainer.register(LocalizationManager, localizationManager);
         ServiceContainer.register(SceneManager, sceneManager);
+        ServiceContainer.register(SpriteFrameSliceService, spriteFrameSliceService);
         ServiceContainer.register(GameManager, gameManager);
         ServiceContainer.register(LevelService, levelService);
         ServiceContainer.register(ProgressionManager, progressionManager);
