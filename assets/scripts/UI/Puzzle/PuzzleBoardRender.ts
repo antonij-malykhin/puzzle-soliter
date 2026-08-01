@@ -5,7 +5,7 @@ import {
     Color,
     tween,
     Tween,
-    Vec2,
+    UITransform,
     CCFloat
 } from 'cc';
 
@@ -42,6 +42,7 @@ export class PuzzleBorderRenderer extends Component {
     inset = 1;
 
     private graphics!: Graphics;
+    private pendingMask: BorderMask | null = null;
 
     private width = 0;
     private height = 0;
@@ -50,28 +51,54 @@ export class PuzzleBorderRenderer extends Component {
     private right: SideState = { current: 1, target: 1 };
     private bottom: SideState = { current: 1, target: 1 };
     private left: SideState = { current: 1, target: 1 };
+    private ui: UITransform | null = null;
+    private pieceId: string = '';
 
-    protected onLoad() {
-
+    public initialize(pieceId: string, width: number, height: number): void {
+        this.pieceId = pieceId;
         this.graphics = this.getComponent(Graphics)!;
 
-        const ui = this.node.getComponent('UITransform') as any;
+        this.ui = this.getComponent(UITransform);
+        if (!this.ui) {
+            return;
+        }
 
-        this.width = ui.width;
-        this.height = ui.height;
+        this.width = width;
+        this.height = height;
 
         this.graphics.strokeColor = this.color;
         this.graphics.lineWidth = this.lineWidth;
 
         this.draw();
+
+        if (this.pendingMask != null) {
+            this.setMask(this.pendingMask, false);
+            this.pendingMask = null;
+        }
+    }
+    
+    public setMask(mask: BorderMask, animate = true) {
+        if (!this.graphics) {
+            this.pendingMask = mask;
+            return;
+        }
+
+        const visiableTop = (mask & BorderMask.Top) != 0;
+        const visiableRight = (mask & BorderMask.Right) != 0;
+        const visiableBottom = (mask & BorderMask.Bottom) != 0;
+        const visiableLeft = (mask & BorderMask.Left) != 0;
+
+        this.animateSide(this.top, visiableTop, animate);
+        this.animateSide(this.right, visiableRight, animate);
+        this.animateSide(this.bottom, visiableBottom, animate);
+        this.animateSide(this.left, visiableLeft, animate);
     }
 
-    public setMask(mask: BorderMask, animate = true) {
-
-        this.animateSide(this.top, (mask & BorderMask.Top) != 0, animate);
-        this.animateSide(this.right, (mask & BorderMask.Right) != 0, animate);
-        this.animateSide(this.bottom, (mask & BorderMask.Bottom) != 0, animate);
-        this.animateSide(this.left, (mask & BorderMask.Left) != 0, animate);
+    protected onDestroy(): void {
+        Tween.stopAllByTarget(this.top);
+        Tween.stopAllByTarget(this.right);
+        Tween.stopAllByTarget(this.bottom);
+        Tween.stopAllByTarget(this.left);
     }
 
     private animateSide(

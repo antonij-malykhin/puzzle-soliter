@@ -4,6 +4,7 @@ export class LocalStorageProvider implements IStorageProvider {
     private readonly memoryFallback = new Map<string, string>();
 
     public async getItem<TValue>(key: string): Promise<TValue | null> {
+        //window.localStorage.clear();
         const rawValue = this.readRaw(key);
         if (!rawValue) {
             return null;

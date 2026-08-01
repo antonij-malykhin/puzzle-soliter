@@ -33,7 +33,7 @@ export class PieceRenderer extends Component {
     private uiTransform: UITransform | null = null;
     
     @property(Graphics)
-    private graphics: Graphics | null = null;
+    private boardGraphics: Graphics | null = null;
     
     @property
     private placeholderCellSize: {x: number; y: number} = {x: 100, y: 100};
@@ -107,13 +107,13 @@ export class PieceRenderer extends Component {
         }));
         const bounds = this.getShapeBounds(cells);
 
-        this.node.removeAllChildren();
         this.uiTransform?.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
 
         this.uiTransform?.setContentSize(bounds.width * this.placeholderCellSize.x, bounds.height * this.placeholderCellSize.y);
         for (const cell of cells) {
             const cellNode = new Node(`Cell_${cell.x}_${cell.y}`);
             cellNode.setParent(this.node);
+            cellNode.setSiblingIndex(0);
             const cellTransform = cellNode.addComponent(UITransform);
             const cellSprite = cellNode.addComponent(Sprite);
             cellSprite.type = Sprite.Type.SIMPLE;

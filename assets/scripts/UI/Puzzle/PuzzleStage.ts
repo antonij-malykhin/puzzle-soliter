@@ -30,8 +30,10 @@ import { GameEventMap } from '../../Core/Events/GameEventMap';
 import { InputManager } from '../../Input/InputManager';
 import { PuzzleManager } from '../../Managers/PuzzleManager';
 import { PuzzlePiece } from '../../Puzzle/PuzzlePiece';
+import { createCoordinateKey } from '../../Puzzle/Types';
 import { PuzzleGameplayMode } from '../../Data/Models/PuzzleGameplayMode';
 import { PieceRenderer } from './PieceRenderer';
+import { BorderMask, PuzzleBorderRenderer } from './PuzzleBoardRender';
 import { ImageBoardRenderer } from '../ImageBoardRenderer';
 import { ImageService } from '../../Services/ImageService';
 import { PieceNodePool } from '../../Utils/PieceNodePool';
@@ -47,6 +49,7 @@ const TOP_LEFT_ANCHOR_Y = 1;
 export class PuzzleStage extends Component {
     private readonly pieceRenderersById = new Map<string, PieceRenderer>();
     private readonly pieceTrayPositionsById = new Map<string, Vec3>();
+    private readonly boardBorderRenderersByKey = new Map<string, PuzzleBorderRenderer>();
     private readonly disposables: Array<() => void> = [];
 
     @property(Node)
@@ -100,10 +103,12 @@ export class PuzzleStage extends Component {
 
         this.disposables.push(eventBus.on('PiecePlaced', ({ pieceId }) => {
             this.snapPieceNodeToBoard(pieceId);
+            //this.updateBoardBorders();
         }));
 
         this.disposables.push(eventBus.on('PieceMoved', ({ pieceId, origin }) => {
             this.snapPieceNodeToOrigin(pieceId, origin.x, origin.y);
+            //this.updateBoardBorders();
         }));
 
         this.disposables.push(eventBus.on('PieceRotated', ({ pieceId, rotation }) => {
@@ -115,10 +120,14 @@ export class PuzzleStage extends Component {
 
         this.disposables.push(eventBus.on('PiecesMerged', ({ pieceIds }) => {
             this.animateMergedPieces(pieceIds);
-
+            this.updateBoardBorders(pieceIds);
             if (this.activePieceId && pieceIds.indexOf(this.activePieceId) >= 0) {
                 this.activeDragGroupPieceIds = [...pieceIds];
             }
+        }));
+
+        this.disposables.push(eventBus.on('LevelLoaded', () => {
+            this.updateBoardBorders(this.puzzleManager?.getPieces().map((piece) => piece.getId()) ?? []);
         }));
 
         this.bindTouchInput();
@@ -136,6 +145,7 @@ export class PuzzleStage extends Component {
         this.pieceNodePool?.clear();
         this.pieceRenderersById.clear();
         this.pieceTrayPositionsById.clear();
+        this.boardBorderRenderersByKey.clear();
 
         this.imageService = null;
         this.activePieceId = null;
@@ -174,6 +184,7 @@ export class PuzzleStage extends Component {
         }
 
         this.boardLayer.removeAllChildren();
+        this.boardBorderRenderersByKey.clear();
 
         const graphics = this.boardLayer.getComponent(Graphics) ?? this.boardLayer.addComponent(Graphics);
         graphics.clear();
@@ -213,6 +224,7 @@ export class PuzzleStage extends Component {
             cellNode.setParent(this.boardLayer);
             const cellTransform = cellNode.addComponent(UITransform);
             const cellSprite = cellNode.addComponent(Sprite);
+            //cellNode.addComponent(Graphics);
             cellSprite.type = Sprite.Type.SIMPLE;
             cellSprite.spriteFrame = this.defaultSpriteFrame;
             cellSprite.color = new Color(255, 255, 255, 150); // Transparent fill
@@ -289,6 +301,13 @@ export class PuzzleStage extends Component {
                 gridHeight: levelData.gridRowCount,
             }
             : undefined);
+
+            const borderRenderer = pieceNode.getComponentInChildren(PuzzleBorderRenderer)!;
+            borderRenderer.initialize(piece.getId(), levelData.gridCellWidth, levelData.gridCellHeight);
+            borderRenderer.color = new Color(80, 90, 120, 255);
+            borderRenderer.lineWidth = 10;
+            borderRenderer.setMask(BorderMask.All, false);
+            this.boardBorderRenderersByKey.set(createCoordinateKey(piece.getCurrentOrigin() ?? piece.getTargetOrigin()), borderRenderer);
             
             const trayPosition = this.getTrayPosition(index);
             if (this.isRectSwapMergeMode()) {
@@ -304,6 +323,8 @@ export class PuzzleStage extends Component {
             this.pieceRenderersById.set(piece.getId(), pieceRenderer);
             this.pieceTrayPositionsById.set(piece.getId(), trayPosition);
         });
+
+        //this.updateBoardBorders(false);
     }
 
     private snapPieceNodeToBoard(pieceId: string): void {
@@ -592,6 +613,76 @@ export class PuzzleStage extends Component {
 
     private isRectSwapMergeMode(): boolean {
         return this.puzzleManager?.getLevelData()?.gameMode === PuzzleGameplayMode.RectSwapMerge;
+    }
+
+    private updateBoardBorders(mergedPieceIds: ReadonlyArray<string>, animate = true): void {
+        const allPiece = this.puzzleManager?.getPieces();
+        for (const pieceId of mergedPieceIds) {
+            const piece = this.puzzleManager?.getPieces().find((item) => item.getId() === pieceId);
+            if (!piece) {
+                continue;
+            }
+
+            let mask = BorderMask.All;
+            const topPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === piece.getCurrentOrigin()?.x && item.getCurrentOrigin()?.y === (piece.getCurrentOrigin()!.y - 1))?.getGroupId();
+            if (topPieceGroupId === piece.getGroupId()) {
+                mask &= ~BorderMask.Top;
+            }
+            const rightPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === (piece.getCurrentOrigin()!.x + 1) && item.getCurrentOrigin()?.y === piece.getCurrentOrigin()?.y)?.getGroupId();
+            if (rightPieceGroupId === piece.getGroupId()) {
+                mask &= ~BorderMask.Right;
+            }
+            const bottomPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === piece.getCurrentOrigin()?.x && item.getCurrentOrigin()?.y === (piece.getCurrentOrigin()!.y + 1))?.getGroupId();
+            if (bottomPieceGroupId === piece.getGroupId()) {
+                mask &= ~BorderMask.Bottom;
+            }
+            const leftPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === (piece.getCurrentOrigin()!.x - 1) && item.getCurrentOrigin()?.y === piece.getCurrentOrigin()?.y)?.getGroupId();
+            if (leftPieceGroupId === piece.getGroupId()) {
+                mask &= ~BorderMask.Left;
+            }
+            const borderRenderer = this.boardBorderRenderersByKey.get(createCoordinateKey(piece.getCurrentOrigin()!));
+            if (borderRenderer) {
+                borderRenderer.setMask(mask, animate);
+            }
+        }
+        // const board = this.puzzleManager?.getBoard();
+        // if (!board) {
+        //     return;
+        // }
+
+        // for (const cell of board.getCells()) {
+        //     const borderRenderer = this.boardBorderRenderersByKey.get(createCoordinateKey(cell.getCoordinate()));
+        //     if (!borderRenderer) {
+        //         continue;
+        //     }
+
+        //     const ownerPieceId = cell.getOwnerPieceId();
+        //     if (!ownerPieceId) {
+        //         borderRenderer.setMask(BorderMask.None, animate);
+        //         continue;
+        //     }
+
+        //     const { x, y } = cell.getCoordinate();
+        //     let mask = BorderMask.All;
+
+        //     if (board.getPieceIdAt({ x, y: y - 1 }) === ownerPieceId) {
+        //         mask &= ~BorderMask.Top;
+        //     }
+
+        //     if (board.getPieceIdAt({ x: x + 1, y }) === ownerPieceId) {
+        //         mask &= ~BorderMask.Right;
+        //     }
+
+        //     if (board.getPieceIdAt({ x, y: y + 1 }) === ownerPieceId) {
+        //         mask &= ~BorderMask.Bottom;
+        //     }
+
+        //     if (board.getPieceIdAt({ x: x - 1, y }) === ownerPieceId) {
+        //         mask &= ~BorderMask.Left;
+        //     }
+
+        //     borderRenderer.setMask(mask, animate);
+        // }
     }
 
     private animateMergedPieces(pieceIds: ReadonlyArray<string>): void {
