@@ -24,18 +24,24 @@ export class GameplayUI extends Component {
 
     private disposables: Array<() => void> = [];
 
+    protected onLoad(): void {
+        this.gameUI.hide();
+        this.pauseUI.hide();
+        this.victoryUI.hide();
+    }
+
     public async initialize(
         eventBus: EventBus<GameEventMap>,
         options: {
             onVictoryNextRequested: () => void;
-            onVictoryRestartRequested: () => void;
+            onBackToLobbyRequested: () => void;
+            onSuggestionRequested: () => void;
         },
     ): Promise<void> {
-        
         this.victoryUI.setNextHandler(options.onVictoryNextRequested);
 
         this.disposables.push(eventBus.on('GameStarted', ({ levelId }) => {
-            this.gameUI?.setLevel(levelId);
+            this.gameUI?.initialize(levelId, eventBus, options.onBackToLobbyRequested, options.onSuggestionRequested);
             this.victoryUI.hide();
             this.pauseUI.hide();
             this.gameUI.show();
@@ -56,17 +62,9 @@ export class GameplayUI extends Component {
             this.settingsUI.setSettings(settings);
         }));
 
-        this.disposables.push(eventBus.on('PiecePlaced', ({ lockedPieces, totalPieces }) => {
-            this.gameUI.setProgress(lockedPieces, totalPieces);
-        }));
-
         this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, elapsedSeconds }) => {
             await this.victoryUI.show();
         }));
-
-        await this.gameUI.hide();
-        await this.pauseUI.hide();
-        await this.victoryUI.hide();
     }
 
     protected onDestroy(): void {

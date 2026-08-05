@@ -1,5 +1,9 @@
 {
   "regionImageId" : "images/regions/chines-dishes/spriteFrame",
+  "cols": 5,
+  "rows": 5,         
+  "spacingX": 5,     
+  "spacingY": 5,
   "levels": [
     {
       "levelId": "training-001",

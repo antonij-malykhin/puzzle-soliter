@@ -18,6 +18,7 @@ import {
     SpriteFrame,
     ScrollView,
     log,
+    Tween,
 } from 'cc';
 import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
@@ -30,7 +31,6 @@ import { GameEventMap } from '../../Core/Events/GameEventMap';
 import { InputManager } from '../../Input/InputManager';
 import { PuzzleManager } from '../../Managers/PuzzleManager';
 import { PuzzlePiece } from '../../Puzzle/PuzzlePiece';
-import { createCoordinateKey } from '../../Puzzle/Types';
 import { PuzzleGameplayMode } from '../../Data/Models/PuzzleGameplayMode';
 import { PieceRenderer } from './PieceRenderer';
 import { BorderMask, PuzzleBorderRenderer } from './PuzzleBoardRender';
@@ -49,7 +49,7 @@ const TOP_LEFT_ANCHOR_Y = 1;
 export class PuzzleStage extends Component {
     private readonly pieceRenderersById = new Map<string, PieceRenderer>();
     private readonly pieceTrayPositionsById = new Map<string, Vec3>();
-    private readonly boardBorderRenderersByKey = new Map<string, PuzzleBorderRenderer>();
+    private readonly boardBorderRenderersByPieceId = new Map<string, PuzzleBorderRenderer>();
     private readonly disposables: Array<() => void> = [];
 
     @property(Node)
@@ -78,6 +78,8 @@ export class PuzzleStage extends Component {
 
     @property(ScrollView)
     private pieceScrollView: ScrollView | null = null;
+
+    private suggestionTween: Tween<Node>[] = [];
     
 
     public initialize(
@@ -103,12 +105,14 @@ export class PuzzleStage extends Component {
 
         this.disposables.push(eventBus.on('PiecePlaced', ({ pieceId }) => {
             this.snapPieceNodeToBoard(pieceId);
-            //this.updateBoardBorders();
         }));
 
         this.disposables.push(eventBus.on('PieceMoved', ({ pieceId, origin }) => {
             this.snapPieceNodeToOrigin(pieceId, origin.x, origin.y);
-            //this.updateBoardBorders();
+        }));
+
+        this.disposables.push(eventBus.on('SuggestionResult', ({ firstPieceId, secondPieceId }) => {
+            this.animateSuggestedPieces(firstPieceId, secondPieceId);
         }));
 
         this.disposables.push(eventBus.on('PieceRotated', ({ pieceId, rotation }) => {
@@ -133,28 +137,56 @@ export class PuzzleStage extends Component {
         this.bindTouchInput();
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
     }
-
+    
     public dispose(): void {
         this.disposables.forEach((dispose) => dispose());
         this.disposables.length = 0;
 
         this.unbindTouchInput();
         input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
-
+        
         this.imageRenderer?.cleanup();
         this.pieceNodePool?.clear();
         this.pieceRenderersById.clear();
         this.pieceTrayPositionsById.clear();
-        this.boardBorderRenderersByKey.clear();
+        this.boardBorderRenderersByPieceId.clear();
 
         this.imageService = null;
         this.activePieceId = null;
         this.activeDragGroupPieceIds = [];
         this.lastPointerPosition = null;
     }
-
+    
     protected onDestroy(): void {
         this.dispose();
+    }
+
+    public stopSuggestionAnimation(): void {
+        if (this.suggestionTween.length > 0) {
+            this.suggestionTween.forEach((t) => t?.stop());
+            this.suggestionTween.length = 0;
+        }
+    }
+
+    public animateSuggestedPieces(firstPieceId: string, secondPieceId: string) {
+        this.stopSuggestionAnimation();    
+        
+        const firstRenderer = this.pieceRenderersById.get(firstPieceId);
+        const secondRenderer = this.pieceRenderersById.get(secondPieceId);
+
+        this.suggestionTween.push(tween(firstRenderer?.node)
+            .to(0.2, { scale: new Vec3(1.2, 1.2, 1.2) })
+            .to(0.2, { scale: new Vec3(1, 1, 1) })
+            .repeatForever()
+            .start()
+        );
+
+        this.suggestionTween.push(tween(secondRenderer?.node)
+            .to(0.2, { scale: new Vec3(1.2, 1.2, 1.2) })
+            .to(0.2, { scale: new Vec3(1, 1, 1) })
+            .repeatForever()
+            .start()
+        );
     }
 
     private ensureLayers(): void {
@@ -184,7 +216,7 @@ export class PuzzleStage extends Component {
         }
 
         this.boardLayer.removeAllChildren();
-        this.boardBorderRenderersByKey.clear();
+        this.boardBorderRenderersByPieceId.clear();
 
         const graphics = this.boardLayer.getComponent(Graphics) ?? this.boardLayer.addComponent(Graphics);
         graphics.clear();
@@ -303,11 +335,9 @@ export class PuzzleStage extends Component {
             : undefined);
 
             const borderRenderer = pieceNode.getComponentInChildren(PuzzleBorderRenderer)!;
-            borderRenderer.initialize(piece.getId(), levelData.gridCellWidth, levelData.gridCellHeight);
-            borderRenderer.color = new Color(80, 90, 120, 255);
-            borderRenderer.lineWidth = 10;
+            borderRenderer.initialize(piece.getId(), levelData.gridCellWidth, levelData.gridCellHeight);;
             borderRenderer.setMask(BorderMask.All, false);
-            this.boardBorderRenderersByKey.set(createCoordinateKey(piece.getCurrentOrigin() ?? piece.getTargetOrigin()), borderRenderer);
+            this.boardBorderRenderersByPieceId.set(piece.getId(), borderRenderer);
             
             const trayPosition = this.getTrayPosition(index);
             if (this.isRectSwapMergeMode()) {
@@ -406,6 +436,7 @@ export class PuzzleStage extends Component {
 
     private onTouchStart(event: EventTouch): void {
         PerformanceMonitor.mark('touch-start');
+        this.stopSuggestionAnimation();
         const inputManager = this.inputManager;
         if (!inputManager) {
             return;
@@ -640,7 +671,7 @@ export class PuzzleStage extends Component {
             if (leftPieceGroupId === piece.getGroupId()) {
                 mask &= ~BorderMask.Left;
             }
-            const borderRenderer = this.boardBorderRenderersByKey.get(createCoordinateKey(piece.getCurrentOrigin()!));
+            const borderRenderer = this.boardBorderRenderersByPieceId.get(pieceId);
             if (borderRenderer) {
                 borderRenderer.setMask(mask, animate);
             }

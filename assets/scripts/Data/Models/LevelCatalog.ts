@@ -8,5 +8,9 @@ export interface LevelCatalogEntry {
 
 export interface LevelCatalogData {
     regionImageId: string;
+    cols: number;
+    rows: number;
+    spacingX: number;
+    spacingY: number;
     levels: LevelCatalogEntry[];
 }

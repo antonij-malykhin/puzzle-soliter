@@ -212,8 +212,8 @@
       "b": 77,
       "a": 255
     },
-    "lineWidth": 10,
-    "duration": 0.15,
+    "lineWidth": 15,
+    "duration": 0.3,
     "inset": 1,
     "_id": ""
   },

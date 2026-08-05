@@ -45,6 +45,10 @@ export class ResourcesLevelProvider implements ILevelProvider {
         const levels = Array.isArray(catalog.levels) ? catalog.levels : [];
         return {
             regionImageId: catalog.regionImageId,
+            cols: catalog.cols,
+            rows: catalog.rows,
+            spacingX: catalog.spacingX,
+            spacingY: catalog.spacingY,
             levels: levels
                 .filter((entry) => Boolean(entry.levelId))
                 .sort((left, right) => {

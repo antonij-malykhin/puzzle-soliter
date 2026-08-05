@@ -5,6 +5,7 @@ import { EventBus } from './Core/Events/EventBus';
 import { ServiceContainer } from './Core/ServiceContainer';
 import { ImageService } from './Services/ImageService';
 import { PuzzleManager } from './Managers/PuzzleManager';
+import { SuggestionManager } from './Managers/SuggestionManager';
 import { InputManager } from './Input/InputManager';
 import { AudioManager } from './Managers/AudioManager';
 import { LocalizationManager } from './Managers/LocalizationManager';
@@ -46,6 +47,7 @@ export class GameplayEntryPoint extends Component {
     private levelData!: LevelData;
     private boardOrigine!: { x: number; y: number; };
     private spriteFrameSliceService!: SpriteFrameSliceService;
+    private suggestionManager!: SuggestionManager;
     
     protected async start(): Promise<void> {
         PerformanceMonitor.clear();
@@ -68,7 +70,6 @@ export class GameplayEntryPoint extends Component {
             this.spriteFrameSliceService
         );
         
-        
         // Warm-up image loading cache for the active level.
         await this.imageService.getImage(this.levelData.imageId).catch(() => {
             // Placeholder content may be absent at early MVP stages.
@@ -81,6 +82,7 @@ export class GameplayEntryPoint extends Component {
             this.gameManager,
             this.sceneManager!,
             this.progressionManager!,
+            this.suggestionManager!,
             this.progressionManager!.getCurrentLevelId()
         );
 
@@ -118,19 +120,20 @@ export class GameplayEntryPoint extends Component {
         this.puzzleManager = ServiceContainer.get(PuzzleManager);
         this.inputManager = ServiceContainer.get(InputManager);
         this.eventBus = ServiceContainer.get(EventBus);
+        this.suggestionManager = ServiceContainer.get(SuggestionManager);
     }
 
     protected onDestroy(): void {
+        this.dispose();
         PerformanceMonitor.report();
         PerformanceMonitor.reportMemory();
-
-        this.puzzleStage?.dispose();
-        this.dispose();
     }
 
     public dispose(): void {
         this.settingsSubscription?.();
         this.gameplayController?.dispose();
         this.gameplayController = null;
+        this.puzzleStage?.dispose();
+        this.puzzleManager?.dispose();
     }
 }

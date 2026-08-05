@@ -4,10 +4,10 @@ import { LobbyLevelCardPresentation } from '../Data/Models/LobbyLevelCardPresent
 export class LobbyController {
     private lobbyUI!: LobbyUI;
 
-    async initialize(lobbyUI: LobbyUI, options: { onPlayRequested: () => void; lobbyCards: ReadonlyArray<LobbyLevelCardPresentation>; }) {
+    async initialize(lobbyUI: LobbyUI, spacingX: number, spacingY: number, cols: number, rows: number, options: { onPlayRequested: () => void; lobbyCards: ReadonlyArray<LobbyLevelCardPresentation>; }) {
         this.lobbyUI = lobbyUI;
         this.lobbyUI.setPlayHandler(options.onPlayRequested);
-		await this.lobbyUI.setCards(options.lobbyCards);
+		await this.lobbyUI.setCards(options.lobbyCards, spacingX, spacingY, cols, rows);
     }
 
     async startLobby() {

@@ -1,14 +1,12 @@
 import { EventBus } from '../Core/Events/EventBus';
 import { GameEventMap } from '../Core/Events/GameEventMap';
 import { GameManager } from './GameManager';
-import { PuzzleGenerator } from '../Generation/PuzzleGenerator';
 import { GeneratedPieceDefinition } from '../Generation/GenerationTypes';
 import { PuzzleBoard } from '../Puzzle/PuzzleBoard';
 import { PuzzlePiece } from '../Puzzle/PuzzlePiece';
 import { Shape } from '../Puzzle/Shape';
 import { CellCoordinate } from '../Puzzle/Types';
 import { PuzzleValidator } from '../Validation/PuzzleValidator';
-import { SnapSystem } from '../Validation/SnapSystem';
 import { LevelData } from '../Data/Models/LevelData';
 import { PuzzleGameplayMode } from '../Data/Models/PuzzleGameplayMode';
 import { DEFAULT_MERGE_ENABLED } from '../Core/Config/GameConstants';
@@ -21,13 +19,12 @@ export class PuzzleManager {
     private levelStartedAtMs = 0;
     private readonly pieces = new Map<string, PuzzlePiece>();
     private readonly groupParentByPieceId = new Map<string, string>();
+    private disposables: Array<() => void> = [];
 
     public constructor(
         private readonly eventBus: EventBus<GameEventMap>,
         private readonly gameManager: GameManager,
-        private readonly generator: PuzzleGenerator,
-        private readonly validator: PuzzleValidator,
-        private readonly snapSystem: SnapSystem,
+        private readonly validator: PuzzleValidator
     ) {}
 
     public initializeLevel(levelData: LevelData): void {
@@ -38,15 +35,7 @@ export class PuzzleManager {
         this.pieces.clear();
         this.groupParentByPieceId.clear();
 
-        const generatedPieces = this.isRectSwapMergeMode()
-            ? this.generateRectangularPieces(levelData)
-            : this.generator.generate({
-                gridWidth: levelData.gridColumnCount,
-                gridHeight: levelData.gridRowCount,
-                minPieceSize: levelData.minPieceSize,
-                maxPieceSize: levelData.maxPieceSize,
-                allowDisconnectedShapeCells: levelData.allowDisconnectedShapeCells,
-            }).pieces;
+        const generatedPieces = this.generateRectangularPieces(levelData)
 
         log('PuzzleManager: Level initialized. Level ID =', levelData.id, 'Generated pieces =', generatedPieces.length);
         generatedPieces.forEach((definition) => {
@@ -58,89 +47,49 @@ export class PuzzleManager {
         if (this.isRectSwapMergeMode()) {
             this.initializeRectSwapMergeLayout();
         }
+
+        this.disposables.push(
+            this.eventBus.on('SuggestionProvided', () => {
+                const suggestionPieceIds: { first: string; second: string } = this.getSuggestionPair();
+                this.eventBus.emit('SuggestionResult', { firstPieceId: suggestionPieceIds.first, secondPieceId: suggestionPieceIds.second });
+            })
+        );
     }
 
+    public dispose(): void {
+        this.disposables.forEach((dispose) => dispose());
+        this.disposables = [];
+    }
+
+    
     public rotatePiece(pieceId: string): void {
         const piece = this.pieces.get(pieceId);
         if (!piece || piece.isLocked()) {
             return;
         }
-
+        
         piece.rotateClockwise();
         this.eventBus.emit('PieceRotated', {
             pieceId,
             rotation: piece.getCurrentRotation(),
         });
     }
-
+    
     public tryPlacePiece(pieceId: string, droppedOrigin: CellCoordinate, snapThreshold: number): boolean {
-        if (!this.board || !this.levelId) {
-            return false;
-        }
-
-        if (this.isRectSwapMergeMode()) {
-            return this.trySwapMovePiece(pieceId, droppedOrigin);
-        }
-
-        const piece = this.pieces.get(pieceId);
-        if (!piece || piece.isLocked()) {
-            return false;
-        }
-
-        this.eventBus.emit('PiecePicked', { pieceId });
-
-        const snappedOrigin = this.snapSystem.trySnapToTarget(
-            droppedOrigin,
-            piece.getTargetOrigin(),
-            snapThreshold,
-        );
-
-        if (!snappedOrigin) {
-            piece.setCurrentOrigin(droppedOrigin);
-            piece.setPlaced(false);
-            console.log('Not snapped origin. Dropped origin =', droppedOrigin, 'Target origin =', piece.getTargetOrigin());
-            return false;
-        }
-
-        const validationResult = this.validator.validatePlacement(this.board, piece, snappedOrigin);
-        if (!validationResult.isValid) {
-            piece.setCurrentOrigin(droppedOrigin);
-            piece.setPlaced(false);
-            console.log('Invalid placement. Reason =', validationResult.reason);
-            return false;
-        }
-
-        const placed = this.board.placePiece(piece, snappedOrigin);
-        if (!placed) {
-            console.log('Failed to place piece on the board. Piece ID =', pieceId, 'Snapped origin =', snappedOrigin);
-        }
-
-        piece.lock(snappedOrigin);
-        this.eventBus.emit('PiecePlaced', {
-            pieceId,
-            lockedPieces: this.getLockedPieceCount(),
-            totalPieces: this.pieces.size,
-        });
-
-        if (this.isSolved()) {
-            const elapsedSeconds = Math.max(0, Math.floor((Date.now() - this.levelStartedAtMs) / 1000));
-            this.gameManager.completeLevel(this.levelId, elapsedSeconds);
-        }
-
-        return true;
+        return this.trySwapMovePiece(pieceId, droppedOrigin);
     }
-
+    
     public getGroupPieceIds(pieceId: string): ReadonlyArray<string> {
         if (!this.pieces.has(pieceId)) {
             return [];
         }
-
+        
         const root = this.findGroupRoot(pieceId);
         return [...this.pieces.values()]
-            .filter((piece) => this.findGroupRoot(piece.getId()) === root)
-            .map((piece) => piece.getId());
+        .filter((piece) => this.findGroupRoot(piece.getId()) === root)
+        .map((piece) => piece.getId());
     }
-
+    
     public getBoard(): PuzzleBoard | null {
         return this.board;
     }
@@ -148,27 +97,95 @@ export class PuzzleManager {
     public getLevelData(): LevelData | null {
         return this.levelData;
     }
-
+    
     public getPieces(): ReadonlyArray<PuzzlePiece> {
         return [...this.pieces.values()];
     }
 
     private isSolved(): boolean {
-        if (!this.board) {
-            return false;
+        return this.isRectSwapMergeSolved();
+    }
+    
+    private getSuggestionPair(): { first: string; second: string; } {
+        const singlePieceIds = this.getSinglePieceIds();
+
+        const groupJoinPair = this.findSinglePairSatisfying(singlePieceIds, (firstPieceId, secondPieceId) =>
+            this.wouldSwapJoinExistingGroup(firstPieceId, secondPieceId));
+        if (groupJoinPair) {
+            return groupJoinPair;
         }
 
-        if (this.isRectSwapMergeMode()) {
-            return this.isRectSwapMergeSolved();
+        const freshMergePair = this.findSinglePairSatisfying(singlePieceIds, (firstPieceId, secondPieceId) =>
+            this.wouldSwapCreateMerge(firstPieceId, secondPieceId));
+        if (freshMergePair) {
+            return freshMergePair;
         }
 
-        const everyPieceLocked = [...this.pieces.values()].every((piece) => piece.isLocked());
-        const fullyOccupied = this.board.isFullyOccupied();
-        return everyPieceLocked && fullyOccupied;
+        throw new Error('No suggestion pair available.');
     }
 
-    private getLockedPieceCount(): number {
-        return [...this.pieces.values()].filter((piece) => piece.isLocked()).length;
+    private findSinglePairSatisfying(
+        singlePieceIds: ReadonlyArray<string>,
+        predicate: (firstPieceId: string, secondPieceId: string) => boolean,
+    ): { first: string; second: string; } | null {
+        for (let firstIndex = 0; firstIndex < singlePieceIds.length; firstIndex += 1) {
+            for (let secondIndex = firstIndex + 1; secondIndex < singlePieceIds.length; secondIndex += 1) {
+                const firstPieceId = singlePieceIds[firstIndex];
+                const secondPieceId = singlePieceIds[secondIndex];
+                if (predicate(firstPieceId, secondPieceId)) {
+                    return { first: firstPieceId, second: secondPieceId };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private getSinglePieceIds(): string[] {
+        return [...this.pieces.keys()].filter((pieceId) => this.getGroupPieceIds(pieceId).length === 1);
+    }
+
+    private wouldSwapCreateMerge(firstPieceId: string, secondPieceId: string): boolean {
+        return this.collectSwapMergeNeighborIds(firstPieceId, secondPieceId).length > 0;
+    }
+
+    private wouldSwapJoinExistingGroup(firstPieceId: string, secondPieceId: string): boolean {
+        return this.collectSwapMergeNeighborIds(firstPieceId, secondPieceId)
+            .some((neighborId) => this.getGroupPieceIds(neighborId).length > 1);
+    }
+
+    /**
+     * Temporarily swaps two pieces on the board (both must currently be single,
+     * i.e. not part of any merged group, so the swap can never break an existing group),
+     * collects which post-swap neighbors would satisfy the merge condition for either piece,
+     * then reverts the board back to its original state before returning.
+     */
+    private collectSwapMergeNeighborIds(firstPieceId: string, secondPieceId: string): ReadonlyArray<string> {
+        if (!this.board) {
+            return [];
+        }
+
+        const firstPiece = this.pieces.get(firstPieceId);
+        const secondPiece = this.pieces.get(secondPieceId);
+        const firstOrigin = firstPiece?.getCurrentOrigin() ?? null;
+        const secondOrigin = secondPiece?.getCurrentOrigin() ?? null;
+        if (!firstPiece || !secondPiece || !firstOrigin || !secondOrigin) {
+            return [];
+        }
+
+        const swapped = this.board.swapPlacedPieces(firstPiece, firstOrigin, secondPiece, secondOrigin);
+        if (!swapped) {
+            return [];
+        }
+
+        const matchingNeighborIds = [
+            ...this.getAdjacentPieceIds(firstPieceId).filter((neighborId) => this.shouldMergeByTargetAdjacency(firstPieceId, neighborId)),
+            ...this.getAdjacentPieceIds(secondPieceId).filter((neighborId) => this.shouldMergeByTargetAdjacency(secondPieceId, neighborId)),
+        ];
+
+        this.board.swapPlacedPieces(firstPiece, secondOrigin, secondPiece, firstOrigin);
+
+        return matchingNeighborIds;
     }
 
     private isRectSwapMergeMode(): boolean {
@@ -217,10 +234,6 @@ export class PuzzleManager {
     }
 
     private initializeRectSwapMergeLayout(): void {
-        if (!this.board) {
-            return;
-        }
-
         const pieces = [...this.pieces.values()];
         const allRectangles = pieces.every((piece) => piece.getBaseShape().isAxisAlignedRectangle());
         if (!allRectangles) {

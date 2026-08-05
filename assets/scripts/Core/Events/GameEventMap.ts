@@ -2,6 +2,7 @@ import { GameState } from '../Enums/GameState';
 import { GameSettings } from '../../Data/Models/GameSettings';
 
 export interface GameEventMap {
+    WalletBalanceChanged: { newBalance: number };
     GameStarted: { levelId: string };
     GameStateChanged: { previous: GameState; current: GameState };
     LevelLoaded: { levelId: string; gridColumnCount: number; gridRowCount: number; gridCellWidth: number; gridCellHeight: number;};
@@ -21,4 +22,6 @@ export interface GameEventMap {
     PieceRotated: { pieceId: string; rotation: number };
     PuzzleCompleted: { levelId: string; elapsedSeconds: number };
     SettingsChanged: { settings: GameSettings };
+    SuggestionProvided: { newCount : number };
+    SuggestionResult: { firstPieceId: string; secondPieceId: string };
 }

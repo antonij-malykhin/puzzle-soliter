@@ -1,5 +1,4 @@
-import { _decorator, Component, log, Node, SpriteFrame, UITransform } from 'cc';
-import { AppBootstrap } from './Core/AppBootstrap';
+import { _decorator, Component, log, SpriteFrame, UITransform } from 'cc';
 import { LobbyUI } from './UI/Screens/LobbyUI';
 import { LobbyController } from './Controllers/LobbyController';
 import { ServiceContainer } from './Core/ServiceContainer';
@@ -43,7 +42,7 @@ export class LobbyEntryPoint extends Component {
         await this.initialize();
         const regionImage = await this.imageService.getImage(this.catalogData!.regionImageId);
         const lobbyCards = await this.getLobbyCards(regionImage);
-        this.lobbyController.initialize(this.lobbyUI, {
+        this.lobbyController.initialize(this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
             onPlayRequested: this.onPlayButtonClicked.bind(this),
             lobbyCards: lobbyCards,
         });
@@ -74,16 +73,14 @@ export class LobbyEntryPoint extends Component {
 
     private async getLobbyCards(regionImage: SpriteFrame): Promise<ReadonlyArray<LobbyLevelCardPresentation>> {
         const currentLevelId = this.progressionManager!.getCurrentLevelId();
-        const orderedLevelIds = this.progressionManager!.getOrderedLevelIds();
-        const halfLevelsCount = Math.floor(this.regionCardCount / 5);
-        const catalogLevelCardWidth = this.lobbyLevelCardRootUiTransform.width / halfLevelsCount;
-        const catalogLevelCardHeight = this.lobbyLevelCardRootUiTransform.height / halfLevelsCount;
+        const catalogLevelCardWidth = this.lobbyLevelCardRootUiTransform.width / this.catalogData!.cols;
+        const catalogLevelCardHeight = this.lobbyLevelCardRootUiTransform.height / this.catalogData!.rows;
 
         const buildPresentation = async (card: LobbyLevelCard): Promise<LobbyLevelCardPresentation> => {
             const slicedRegionImage = await this.imageSliceService.sliceGridCell({
                 sourceSpriteFrame: regionImage,
-                gridWidth: halfLevelsCount,
-                gridHeight: halfLevelsCount,
+                gridWidth: this.catalogData!.cols,
+                gridHeight: this.catalogData!.rows,
                 cellX: card.gridX - 1,
                 cellY: card.gridY - 1,
             });

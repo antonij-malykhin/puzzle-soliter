@@ -13,10 +13,7 @@ import { ResourcesLevelProvider } from '../Services/Content/ResourcesLevelProvid
 import { ImageService } from '../Services/ImageService';
 import { ResourcesImageLoader } from '../Services/Content/ResourcesImageLoader';
 import { PuzzleManager } from '../Managers/PuzzleManager';
-import { PuzzleGenerator } from '../Generation/PuzzleGenerator';
-import { BacktrackingGenerationStrategy } from '../Generation/BacktrackingGenerationStrategy';
 import { PuzzleValidator } from '../Validation/PuzzleValidator';
-import { SnapSystem } from '../Validation/SnapSystem';
 import { InputManager } from '../Input/InputManager';
 import { DragSystem } from '../Input/DragSystem';
 import { RotationSystem } from '../Input/RotationSystem';
@@ -24,10 +21,12 @@ import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
     DEFAULT_BOARD_ORIGIN_WORLD_Y,
 } from './Config/GameConstants';
-import { _decorator, Component, director, UITransform } from 'cc';
+import { _decorator, Component, director } from 'cc';
 import { ServiceContainer } from './ServiceContainer';
 import { AppConfigService } from '../Services/AppConfigService';
 import { SpriteFrameSliceService } from '../Services/SpriteFrameSliceService';
+import { SuggestionManager } from '../Managers/SuggestionManager';
+import { WalletManager } from '../Managers/WalletManager';
 
 const { ccclass } = _decorator;
 
@@ -59,12 +58,12 @@ export class AppBootstrap extends Component {
         const progressionManager = new ProgressionManager(saveManager, levelService);
         const imageService = new ImageService(new ResourcesImageLoader());
         const appConfigService = new AppConfigService();
+        const walletManager = new WalletManager(eventBus);
+        const suggestionManager = new SuggestionManager(walletManager, eventBus, 3, 10);
         const puzzleManager = new PuzzleManager(
             eventBus,
             gameManager,
-            new PuzzleGenerator(new BacktrackingGenerationStrategy()),
-            new PuzzleValidator(),
-            new SnapSystem(),
+            new PuzzleValidator()
         );
 
         const inputManager = new InputManager(
@@ -95,5 +94,7 @@ export class AppBootstrap extends Component {
         ServiceContainer.register(ImageService, imageService);
         ServiceContainer.register(PuzzleManager, puzzleManager);
         ServiceContainer.register(AppConfigService, appConfigService);
+        ServiceContainer.register(SuggestionManager, suggestionManager);
+        ServiceContainer.register(WalletManager, walletManager);
     }
 }

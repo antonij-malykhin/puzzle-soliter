@@ -12,6 +12,7 @@ import {
 import { UIView } from '../Base/UIView';
 import { LobbyLevelCardPresentation } from '../../Data/Models/LobbyLevelCardPresentation';
 import { LobbyLevelCardUI } from './LobbyLevelCardUI';
+import { LevelGridManager } from './LevelGridManager';
 
 const { ccclass, property } = _decorator;
 
@@ -19,6 +20,9 @@ const { ccclass, property } = _decorator;
 export class LobbyUI extends UIView {
 	@property
 	private flipHalfDuration: number = 0.16;
+
+	@property(LevelGridManager)
+	private levelGridManager: LevelGridManager | null = null;
 
 	@property(Label)
 	private levelLabel: Label | null = null;
@@ -43,7 +47,7 @@ export class LobbyUI extends UIView {
 		this.playHandler = handler;
 	}
 
-	public async setCards(cards: ReadonlyArray<LobbyLevelCardPresentation>): Promise<void> {
+	public async setCards(cards: ReadonlyArray<LobbyLevelCardPresentation>, spacingX: number, spacingY: number, cols: number, rows: number): Promise<void> {
 		if (!this.gridRoot) {
 			throw new Error('Grid root is not set.');
 		}
@@ -53,9 +57,10 @@ export class LobbyUI extends UIView {
 			await this.createCardNode(card, this.cardPrefab!);
 		}
 
+		this.levelGridManager?.initGrid(spacingX, spacingY, cols, rows);
 		const currentCard = cards.find((card) => card.isCurrent);
 		this.levelLabel!.string = currentCard
-			? `Current level: ${currentCard.levelNumber}`
+			? `Уровень ${currentCard.levelNumber}`
 			: 'Current level: not selected';
 	}
 

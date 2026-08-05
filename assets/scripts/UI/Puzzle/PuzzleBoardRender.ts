@@ -30,10 +30,10 @@ interface SideState {
 export class PuzzleBorderRenderer extends Component {
 
     @property(Color)
-    color = Color.WHITE.clone();
+    color = new Color(80, 90, 120, 255);
 
     @property(CCFloat)
-    lineWidth = 4;
+    lineWidth = 10;
 
     @property(CCFloat)
     duration = 0.15;
