@@ -10,6 +10,7 @@ export interface LevelData {
     snapThreshold: number;
     minPieceSize: number;
     maxPieceSize: number;
+    rewardCoins: number;
     allowDisconnectedShapeCells?: boolean;
     gameMode?: PuzzleGameplayMode;
     pieceColumns?: number;

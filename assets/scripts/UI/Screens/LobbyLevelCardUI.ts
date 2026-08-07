@@ -1,5 +1,6 @@
 import { _decorator, Component, Label, Sprite, SpriteFrame, UITransform } from 'cc';
 import { LobbyLevelCardPresentation } from '../../Data/Models/LobbyLevelCardPresentation';
+import { LobbyCurrentLevelCardAnimation } from '../Animation/LobbyCurrentLevelCardAnimation';
 
 const { ccclass, property } = _decorator;
 
@@ -16,6 +17,8 @@ export class LobbyLevelCardUI extends Component {
 
 	@property(UITransform)
 	public uiTransform: UITransform | null = null;
+
+    private currentLevelAnimation: LobbyCurrentLevelCardAnimation | null = null;
 
 	public render(card: LobbyLevelCardPresentation): void {
 		this.setLevelNumberLabel(card.isCompleted && !card.shouldAnimateFlip ? '' : `${card.levelNumber}`);
@@ -52,4 +55,16 @@ export class LobbyLevelCardUI extends Component {
 		this.frontsideSprite!.node.active = true;
 		this.frontsideSprite!.spriteFrame = frontSpriteFrame;
 	}
+
+    public playCurrentLevelAnimation(): void {
+        if (!this.currentLevelAnimation) {
+            this.currentLevelAnimation = new LobbyCurrentLevelCardAnimation(this.node);
+        }
+
+        this.currentLevelAnimation.play();
+    }
+
+    protected onDestroy(): void {
+        this.currentLevelAnimation?.stop();
+    }
 }

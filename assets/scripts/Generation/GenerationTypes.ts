@@ -7,6 +7,8 @@ export interface PuzzleGenerationRequest {
     minPieceSize: number;
     maxPieceSize: number;
     allowDisconnectedShapeCells?: boolean;
+    pieceColumns?: number;
+    pieceRows?: number;
 }
 
 export interface GeneratedPieceDefinition {

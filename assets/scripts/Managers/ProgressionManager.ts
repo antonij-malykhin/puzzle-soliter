@@ -1,6 +1,7 @@
 import { GameProgress } from '../Data/Models/GameProgress';
 import { SaveManager } from './SaveManager';
 import { LevelService } from '../Services/LevelService';
+import { WalletManager } from './WalletManager';
 
 export class ProgressionManager {
     private progress: GameProgress | null = null;
@@ -9,10 +10,12 @@ export class ProgressionManager {
     public constructor(
         private readonly saveManager: SaveManager,
         private readonly levelService: LevelService,
+        private readonly walletManager: WalletManager,
     ) {}
 
     public async initialize(): Promise<void> {
         this.progress = await this.saveManager.loadProgress();
+        this.walletManager.setBalance(this.progress.coins);
         this.orderedLevelIds = [...(await this.levelService.getOrderedLevelIds(this.progress.regionNumber))];
 
         if (this.orderedLevelIds.length === 0) {
@@ -24,6 +27,36 @@ export class ProgressionManager {
             this.progress.currentLevelId = this.getFirstIncompleteLevelId();
             await this.save();
         }
+    }
+
+    public getCoins(): number {
+        return this.requireProgress().coins;
+    }
+
+    public async addCoins(amount: number): Promise<void> {
+        if (amount <= 0) {
+            return;
+        }
+
+        const progress = this.requireProgress();
+        progress.coins += amount;
+        await this.save();
+        this.walletManager.addBalance(amount);
+    }
+
+    public async spendCoins(amount: number): Promise<void> {
+        if (amount <= 0) {
+            return;
+        }
+
+        const progress = this.requireProgress();
+        if (amount > progress.coins) {
+            throw new Error('Insufficient balance');
+        }
+
+        progress.coins -= amount;
+        await this.save();
+        this.walletManager.decreaseBalance(amount);
     }
 
     public getOrderedLevelIds(): ReadonlyArray<string> {
@@ -73,7 +106,8 @@ export class ProgressionManager {
 
     public async markLevelCompleted(levelId: string, elapsedSeconds: number): Promise<void> {
         const progress = this.requireProgress();
-        if (progress.completedLevelIds.indexOf(levelId) < 0) {
+        const isFirstCompletion = progress.completedLevelIds.indexOf(levelId) < 0;
+        if (isFirstCompletion) {
             progress.completedLevelIds.push(levelId);
         }
 
@@ -85,6 +119,11 @@ export class ProgressionManager {
         progress.recentlyCompletedLevelId = levelId;
         progress.currentLevelId = this.getFirstIncompleteLevelId();
         await this.save();
+
+        if (isFirstCompletion) {
+            const levelData = await this.levelService.getLevel(levelId);
+            await this.addCoins(levelData.rewardCoins ?? 0);
+        }
     }
 
     public async consumeRecentlyCompletedLevelId(): Promise<string | null> {
@@ -99,16 +138,30 @@ export class ProgressionManager {
         return recentlyCompletedLevelId;
     }
 
-    public getProgressSnapshot(): GameProgress {
+    public isCurrentRegionCompleted(): boolean {
         const progress = this.requireProgress();
-        return {
-            completedLevelIds: [...progress.completedLevelIds],
-            starsByLevel: { ...progress.starsByLevel },
-            bestTimeByLevelSeconds: { ...progress.bestTimeByLevelSeconds },
-            currentLevelId: progress.currentLevelId,
-            recentlyCompletedLevelId: progress.recentlyCompletedLevelId,
-            regionNumber: progress.regionNumber,
-        };
+        return (
+            this.orderedLevelIds.length > 0 &&
+            this.orderedLevelIds.every(
+                (levelId) => progress.completedLevelIds.indexOf(levelId) >= 0,
+            )
+        );
+    }
+
+    public async advanceToNextRegion(): Promise<void> {
+        const progress = this.requireProgress();
+        progress.regionNumber += 1;
+        this.orderedLevelIds = [
+            ...(await this.levelService.getOrderedLevelIds(progress.regionNumber)),
+        ];
+
+        if (this.orderedLevelIds.length === 0) {
+            this.orderedLevelIds = [this.levelService.getTrainingLevelId()];
+        }
+
+        progress.currentLevelId = this.getFirstIncompleteLevelId();
+        progress.recentlyCompletedLevelId = null;
+        await this.save();
     }
 
     private getFirstIncompleteLevelId(): string {

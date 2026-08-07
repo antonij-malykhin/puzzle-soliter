@@ -102,13 +102,4 @@ export class PieceNodePool {
         this.pool.forEach((renderer) => renderer.node.destroy());
         this.pool.length = 0;
     }
-
-    /** Get current pool stats for monitoring */
-    public getStats(): { pooled: number; active: number; total: number } {
-        return {
-            pooled: this.pool.length,
-            active: this.activeRenderers.size,
-            total: this.pool.length + this.activeRenderers.size,
-        };
-    }
 }

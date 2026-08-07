@@ -4,6 +4,31 @@
     "common": {
       "polyfills": {
         "asyncFunctions": true
+      },
+      "name": "PuzzleMozaicDebug",
+      "debug": true,
+      "sourceMaps": true,
+      "useSplashScreen": false
+    },
+    "taskOptionsMap": {
+      "1785949278169": {
+        "useWebGPU": false,
+        "resolution": {
+          "designWidth": 960,
+          "designHeight": 1280
+        },
+        "__version__": "1.0.1"
+      }
+    },
+    "__version__": "1.3.9",
+    "options": {
+      "web-desktop": {
+        "useWebGPU": false,
+        "resolution": {
+          "designWidth": 960,
+          "designHeight": 1280
+        },
+        "__version__": "1.0.1"
       }
     }
   }

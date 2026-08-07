@@ -7,7 +7,8 @@ export class SaveManager {
     public constructor(private readonly storageProvider: IStorageProvider) {}
 
     public async loadSettings(): Promise<GameSettings> {
-        return (await this.storageProvider.getItem<GameSettings>(SAVE_SETTINGS_KEY)) ?? createDefaultGameSettings();
+        const stored = await this.storageProvider.getItem<Partial<GameSettings>>(SAVE_SETTINGS_KEY);
+        return stored ? { ...createDefaultGameSettings(), ...stored } : createDefaultGameSettings();
     }
 
     public async saveSettings(settings: GameSettings): Promise<void> {
@@ -30,6 +31,7 @@ export class SaveManager {
             currentLevelId: stored.currentLevelId ?? defaults.currentLevelId,
             recentlyCompletedLevelId: stored.recentlyCompletedLevelId ?? defaults.recentlyCompletedLevelId,
             regionNumber: typeof stored.regionNumber === 'number' ? stored.regionNumber : defaults.regionNumber,
+            coins: typeof stored.coins === 'number' ? stored.coins : defaults.coins,
         };
     }
 

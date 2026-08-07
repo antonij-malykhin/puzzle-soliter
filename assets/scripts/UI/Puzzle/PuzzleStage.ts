@@ -1,24 +1,15 @@
 import {
     _decorator,
-    Color,
     Component,
-    EventKeyboard,
-    EventTouch,
-    Graphics,
-    input,
-    Input,
-    KeyCode,
     Node,
+    Prefab,
+    ScrollView,
+    SpriteFrame,
+    Tween,
     UITransform,
     Vec2,
     Vec3,
     tween,
-    Prefab,
-    Sprite,
-    SpriteFrame,
-    ScrollView,
-    log,
-    Tween,
 } from 'cc';
 import {
     DEFAULT_BOARD_ORIGIN_WORLD_X,
@@ -37,9 +28,10 @@ import { BorderMask, PuzzleBorderRenderer } from './PuzzleBoardRender';
 import { ImageBoardRenderer } from '../ImageBoardRenderer';
 import { ImageService } from '../../Services/ImageService';
 import { PieceNodePool } from '../../Utils/PieceNodePool';
-import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
 import { BoardCoordinateMapper } from '../../Utils/BoardCoordinateMapper';
 import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
+import { PieceBorderUpdater } from './PieceBorderUpdater';
+import { PuzzleTouchInput } from './PuzzleTouchInput';
 
 const { ccclass, property } = _decorator;
 const TOP_LEFT_ANCHOR_X = 0;
@@ -52,8 +44,6 @@ export class PuzzleStage extends Component {
     private readonly boardBorderRenderersByPieceId = new Map<string, PuzzleBorderRenderer>();
     private readonly disposables: Array<() => void> = [];
 
-    @property(Node)
-    private boardLayer: Node | null = null;
     @property(Node)
     private pieceTrayLayer: Node | null = null;
     @property(Prefab)
@@ -68,19 +58,18 @@ export class PuzzleStage extends Component {
     private inputManager: InputManager | null = null;
     private puzzleManager: PuzzleManager | null = null;
     private imageService: ImageService | null = null;
-    private activePieceId: string | null = null;
-    private activeDragGroupPieceIds: string[] = [];
-    private lastPointerPosition: Vec2 | null = null;
+    private boardCoordinateMapper: BoardCoordinateMapper | null = null;
+    private borderUpdater: PieceBorderUpdater | null = null;
+    private touchInput: PuzzleTouchInput | null = null;
     private spriteFrameSliceService!: SpriteFrameSliceService;
 
     @property(Node)
-    private touchInputNode: Node | null = null; // обычно Content/Viewport ScrollView
+    private touchInputNode: Node | null = null;
 
     @property(ScrollView)
     private pieceScrollView: ScrollView | null = null;
 
     private suggestionTween: Tween<Node>[] = [];
-    
 
     public initialize(
         puzzleManager: PuzzleManager,
@@ -96,10 +85,30 @@ export class PuzzleStage extends Component {
         this.imageService = imageService;
         this.spriteFrameSliceService = spriteFrameSliceService;
         this.imageRenderer = new ImageBoardRenderer(imageService);
-        this.pieceNodePool = new PieceNodePool(32, this.piecePrefab); // Pool up to 32 pieces
+        this.pieceNodePool = new PieceNodePool(32, this.piecePrefab);
         this.ensureLayers();
 
-        this.renderBoard();
+        this.boardCoordinateMapper = this.createBoardMapper();
+        this.borderUpdater = new PieceBorderUpdater(
+            () => this.puzzleManager?.getPieces() ?? [],
+            this.boardBorderRenderersByPieceId,
+        );
+        this.touchInput = new PuzzleTouchInput({
+            inputManager,
+            puzzleManager,
+            pieceLayer: this.pieceLayer,
+            pieceTrayLayer: this.pieceTrayLayer,
+            pieceScrollView: this.pieceScrollView,
+            getRenderers: () => this.pieceRenderersById,
+            pickPieceAt: (worldX, worldY) => this.pickPieceAt(worldX, worldY),
+            stopSuggestionAnimation: () => this.stopSuggestionAnimation(),
+            isRectSwapMergeMode: () => this.isRectSwapMergeMode(),
+            snapPieceToBoard: (pieceId) => this.snapPieceNodeToBoard(pieceId),
+            snapGroupToCurrentOrigin: (pieceIds) => this.snapGroupNodesToCurrentOrigin(pieceIds),
+            snapPieceToTrayAndAnimate: (pieceId) => this.snapPieceToTrayAndAnimate(pieceId),
+        });
+        this.touchInput.bind(this.touchInputNode);
+
         void this.renderImage();
         void this.renderPieces();
 
@@ -124,27 +133,21 @@ export class PuzzleStage extends Component {
 
         this.disposables.push(eventBus.on('PiecesMerged', ({ pieceIds }) => {
             this.animateMergedPieces(pieceIds);
-            this.updateBoardBorders(pieceIds);
-            if (this.activePieceId && pieceIds.indexOf(this.activePieceId) >= 0) {
-                this.activeDragGroupPieceIds = [...pieceIds];
-            }
+            this.borderUpdater?.update(pieceIds);
         }));
 
         this.disposables.push(eventBus.on('LevelLoaded', () => {
-            this.updateBoardBorders(this.puzzleManager?.getPieces().map((piece) => piece.getId()) ?? []);
+            this.borderUpdater?.update(this.puzzleManager?.getPieces().map((piece) => piece.getId()) ?? []);
         }));
-
-        this.bindTouchInput();
-        input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
     }
-    
+
     public dispose(): void {
         this.disposables.forEach((dispose) => dispose());
         this.disposables.length = 0;
 
-        this.unbindTouchInput();
-        input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
-        
+        this.touchInput?.unbind(this.touchInputNode);
+        this.touchInput = null;
+
         this.imageRenderer?.cleanup();
         this.pieceNodePool?.clear();
         this.pieceRenderersById.clear();
@@ -152,11 +155,10 @@ export class PuzzleStage extends Component {
         this.boardBorderRenderersByPieceId.clear();
 
         this.imageService = null;
-        this.activePieceId = null;
-        this.activeDragGroupPieceIds = [];
-        this.lastPointerPosition = null;
+        this.boardCoordinateMapper = null;
+        this.borderUpdater = null;
     }
-    
+
     protected onDestroy(): void {
         this.dispose();
     }
@@ -168,9 +170,9 @@ export class PuzzleStage extends Component {
         }
     }
 
-    public animateSuggestedPieces(firstPieceId: string, secondPieceId: string) {
-        this.stopSuggestionAnimation();    
-        
+    public animateSuggestedPieces(firstPieceId: string, secondPieceId: string): void {
+        this.stopSuggestionAnimation();
+
         const firstRenderer = this.pieceRenderersById.get(firstPieceId);
         const secondRenderer = this.pieceRenderersById.get(secondPieceId);
 
@@ -190,11 +192,6 @@ export class PuzzleStage extends Component {
     }
 
     private ensureLayers(): void {
-        if (!this.boardLayer) {
-            this.boardLayer = new Node('BoardLayer');
-            this.boardLayer.setParent(this.node);
-        }
-
         if (!this.pieceTrayLayer) {
             this.pieceTrayLayer = new Node('PieceTrayLayer');
             this.pieceTrayLayer.setParent(this.node);
@@ -204,84 +201,21 @@ export class PuzzleStage extends Component {
             this.pieceLayer.setParent(this.node);
         }
 
-        //this.ensureTopLeftAnchor(this.boardLayer);
         this.ensureTopLeftAnchor(this.pieceTrayLayer);
-        //this.ensureTopLeftAnchor(this.pieceLayer);
-    }
-
-    private renderBoard(): void {
-        const board = this.puzzleManager?.getBoard();
-        if (!board || !this.boardLayer) {
-            return;
-        }
-
-        this.boardLayer.removeAllChildren();
-        this.boardBorderRenderersByPieceId.clear();
-
-        const graphics = this.boardLayer.getComponent(Graphics) ?? this.boardLayer.addComponent(Graphics);
-        graphics.clear();
-        graphics.lineWidth = 2;
-        graphics.strokeColor = new Color(80, 90, 120, 255);
-
-        const mapper = this.createBoardMapper();
-        if (!mapper) {
-            return;
-        }
-
-        const gridColumnCount = mapper.getGridColumnCount();
-        const gridRowCount = mapper.getGridRowCount();
-        const cellSize = mapper.getCellSize();
-        const fullWidth = mapper.getFullWidth();
-        const fullHeight = mapper.getFullHeight();
-        const topLeft = mapper.getTopLeftWorld();
-
-        for (let index = 0; index <= gridColumnCount; index += 1) {
-            const offset = index * cellSize.x;
-            const verticalX = topLeft.x + offset;
-
-            graphics.moveTo(verticalX, topLeft.y);
-            graphics.lineTo(verticalX, topLeft.y - fullHeight);
-        }
-
-        for (let index = 0; index <= gridRowCount; index += 1) {
-            const offset = index * cellSize.y;
-            const horizontalY = topLeft.y - offset;
-            graphics.moveTo(topLeft.x, horizontalY);
-            graphics.lineTo(topLeft.x + fullWidth, horizontalY);
-        }
-
-        for (const cell of board.getCells()) {
-            const cellCoordinate = cell.getCoordinate();
-            const cellNode = new Node(`BoardCell_${cellCoordinate.x}_${cellCoordinate.y}`);
-            cellNode.setParent(this.boardLayer);
-            const cellTransform = cellNode.addComponent(UITransform);
-            const cellSprite = cellNode.addComponent(Sprite);
-            //cellNode.addComponent(Graphics);
-            cellSprite.type = Sprite.Type.SIMPLE;
-            cellSprite.spriteFrame = this.defaultSpriteFrame;
-            cellSprite.color = new Color(255, 255, 255, 150); // Transparent fill
-            cellTransform.setContentSize(cellSize.x, cellSize.y);
-            cellTransform.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
-            const worldPosition = mapper.cellToWorld(cellCoordinate.x, cellCoordinate.y);
-            cellNode.setPosition(worldPosition.x, worldPosition.y, 0);
-        }
-
-        graphics.stroke();
     }
 
     private async renderImage(): Promise<void> {
-        const board = this.puzzleManager?.getBoard();
         const levelData = this.puzzleManager?.getLevelData();
-        if (!board || !this.boardLayer || !levelData || !this.imageRenderer) {
+        if (!levelData || !this.imageRenderer) {
             return;
         }
 
-        const boardWidth = board.getGridWidth() * levelData.gridCellWidth;
-        const boardHeight = board.getGridHeight() * levelData.gridCellHeight;
+        const boardWidth = levelData.gridColumnCount * levelData.gridCellWidth;
+        const boardHeight = levelData.gridRowCount * levelData.gridCellHeight;
 
         await this.imageRenderer.render(
             levelData.imageId,
-            this.boardLayer,
+            this.pieceLayer!,
             DEFAULT_BOARD_ORIGIN_WORLD_X,
             DEFAULT_BOARD_ORIGIN_WORLD_Y,
             boardWidth,
@@ -309,7 +243,6 @@ export class PuzzleStage extends Component {
             }
         }
 
-        // Release all previously pooled nodes
         this.pieceNodePool.releaseAll();
         this.pieceRenderersById.clear();
         this.pieceTrayPositionsById.clear();
@@ -317,28 +250,27 @@ export class PuzzleStage extends Component {
 
         const pieces = this.puzzleManager.getPieces();
         pieces.forEach((piece, index) => {
-            // Get renderer from pool
             const pieceRenderer = this.pieceNodePool!.get();
             const pieceNode = pieceRenderer.node;
             pieceNode.name = `Piece_${piece.getId()}`;
             pieceNode.setParent(this.pieceTrayLayer);
             this.ensureTopLeftAnchor(pieceNode);
             pieceRenderer.initialize(this.spriteFrameSliceService);
-            pieceRenderer.setCellSize({x: levelData.gridCellWidth, y: levelData.gridCellHeight});
+            pieceRenderer.setCellSize({ x: levelData.gridCellWidth, y: levelData.gridCellHeight });
             pieceRenderer.render(piece.getId(), piece.getBaseShape(), sourceSpriteFrame
-            ? {
-                sourceSpriteFrame,
-                targetOrigin: piece.getTargetOrigin(),
-                gridWidth: levelData.gridColumnCount,
-                gridHeight: levelData.gridRowCount,
-            }
-            : undefined);
+                ? {
+                    sourceSpriteFrame,
+                    targetOrigin: piece.getTargetOrigin(),
+                    gridWidth: levelData.gridColumnCount,
+                    gridHeight: levelData.gridRowCount,
+                }
+                : undefined);
 
             const borderRenderer = pieceNode.getComponentInChildren(PuzzleBorderRenderer)!;
-            borderRenderer.initialize(piece.getId(), levelData.gridCellWidth, levelData.gridCellHeight);;
+            borderRenderer.initialize(piece.getId(), levelData.gridCellWidth, levelData.gridCellHeight);
             borderRenderer.setMask(BorderMask.All, false);
             this.boardBorderRenderersByPieceId.set(piece.getId(), borderRenderer);
-            
+
             const trayPosition = this.getTrayPosition(index);
             if (this.isRectSwapMergeMode()) {
                 const currentOrigin = piece.getCurrentOrigin() ?? piece.getTargetOrigin();
@@ -353,13 +285,11 @@ export class PuzzleStage extends Component {
             this.pieceRenderersById.set(piece.getId(), pieceRenderer);
             this.pieceTrayPositionsById.set(piece.getId(), trayPosition);
         });
-
-        //this.updateBoardBorders(false);
     }
 
     private snapPieceNodeToBoard(pieceId: string): void {
         const pieceRenderer = this.pieceRenderersById.get(pieceId);
-        const piece = this.puzzleManager?.getPieces().find((item) => item.getId() === pieceId);
+        const piece = this.puzzleManager?.getPiece(pieceId);
         if (!pieceRenderer || !piece) {
             return;
         }
@@ -376,7 +306,6 @@ export class PuzzleStage extends Component {
             return;
         }
 
-        // Animate piece back to tray with smooth easing
         tween(pieceRenderer.node)
             .to(0.3, { position: trayPosition }, { easing: 'quartInOut' })
             .start();
@@ -401,165 +330,6 @@ export class PuzzleStage extends Component {
             -row * DEFAULT_PIECE_TRAY_ROW_GAP,
             0,
         );
-    }
-
-    private bindTouchInput(): void {
-        if (this.touchInputNode) {
-            this.touchInputNode.on(Node.EventType.TOUCH_START, this.onTouchStart, this, true);
-            this.touchInputNode.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this, true);
-            this.touchInputNode.on(Node.EventType.TOUCH_END, this.onTouchEnd, this, true);
-            this.touchInputNode.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this, true);
-            return;
-        }
-
-        // fallback если touchInputNode не назначена
-        input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
-        input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
-        input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    }
-
-    private unbindTouchInput(): void {
-        if (this.touchInputNode) {
-            this.touchInputNode.off(Node.EventType.TOUCH_START, this.onTouchStart, this, true);
-            this.touchInputNode.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this, true);
-            this.touchInputNode.off(Node.EventType.TOUCH_END, this.onTouchEnd, this, true);
-            this.touchInputNode.off(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this, true);
-            return;
-        }
-
-        input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
-        input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
-        input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    }
-
-    private onTouchStart(event: EventTouch): void {
-        PerformanceMonitor.mark('touch-start');
-        this.stopSuggestionAnimation();
-        const inputManager = this.inputManager;
-        if (!inputManager) {
-            return;
-        }
-
-        const location = event.getUILocation();
-        PerformanceMonitor.mark('hit-test-start');
-        const selectedPiece = this.pickPieceAt(location.x, location.y);
-        PerformanceMonitor.measure('hit-test', 'hit-test-start');
-        if (!selectedPiece) {
-            return;
-        }
-
-        this.activePieceId = selectedPiece.getId();
-        this.activeDragGroupPieceIds = this.isRectSwapMergeMode()
-            ? [...(this.puzzleManager?.getGroupPieceIds(this.activePieceId) ?? [this.activePieceId])]
-            : [this.activePieceId];
-        this.lastPointerPosition = new Vec2(location.x, location.y);
-        this.pieceScrollView && (this.pieceScrollView.enabled = false);
-
-        inputManager.beginDrag(this.activePieceId, {
-            x: location.x,
-            y: location.y,
-        });
-
-        const pieceRenderer = this.pieceRenderersById.get(this.activePieceId);
-
-        if (!pieceRenderer) {
-            console.warn('Piece renderer not found for piece ID:', this.activePieceId);
-            
-            return;
-        }
-
-        this.activeDragGroupPieceIds.forEach((id) => {
-            const renderer = this.pieceRenderersById.get(id);
-            if (!renderer) {
-                return;
-            }
-
-            renderer.node.setParent(this.pieceLayer);
-            renderer.node.setSiblingIndex(Number.MAX_SAFE_INTEGER);
-        });
-    }
-
-    private onTouchMove(event: EventTouch): void {
-        const inputManager = this.inputManager;
-        if (!inputManager || !this.activePieceId) {
-            return;
-        }
-
-        const location = event.getUILocation();
-        const nextPointerPosition = new Vec2(location.x, location.y);
-        if (this.lastPointerPosition) {
-            const deltaX = nextPointerPosition.x - this.lastPointerPosition.x;
-            const deltaY = nextPointerPosition.y - this.lastPointerPosition.y;
-            this.activeDragGroupPieceIds.forEach((id) => {
-                const renderer = this.pieceRenderersById.get(id);
-                if (!renderer) {
-                    return;
-                }
-
-                const currentWorldPosition = renderer.node.worldPosition;
-                renderer.node.setWorldPosition(
-                    currentWorldPosition.x + deltaX,
-                    currentWorldPosition.y + deltaY,
-                    currentWorldPosition.z,
-                );
-            });
-        }
-
-        this.lastPointerPosition = nextPointerPosition;
-        inputManager.updatePointer({ x: location.x, y: location.y });
-    }
-
-    private onTouchEnd(): void {
-        PerformanceMonitor.mark('drop-start');
-        const inputManager = this.inputManager;
-        if (!inputManager || !this.activePieceId) {
-            this.pieceScrollView && (this.pieceScrollView.enabled = true);
-            return;
-        }
-
-        const pieceId = this.activePieceId;
-        const placed = inputManager.endDrag();
-        PerformanceMonitor.measure('placement-check', 'drop-start');
-
-        const pieceRenderer = this.pieceRenderersById.get(this.activePieceId);
-
-        if (placed) {
-            if (this.isRectSwapMergeMode()) {
-                this.snapGroupNodesToCurrentOrigin(this.activeDragGroupPieceIds);
-            } else {
-                this.snapPieceNodeToBoard(pieceId);
-            }
-        } else {
-            if (this.isRectSwapMergeMode()) {
-                this.snapGroupNodesToCurrentOrigin(this.activeDragGroupPieceIds);
-            } else {
-                pieceRenderer?.node.setParent(this.pieceTrayLayer);
-                this.animatePieceToTray(pieceId);
-            }
-        }
-
-        this.activePieceId = null;
-        this.activeDragGroupPieceIds = [];
-        this.lastPointerPosition = null;
-        this.pieceScrollView && (this.pieceScrollView.enabled = true);
-    }
-
-    private onKeyDown(event: EventKeyboard): void {
-        if (event.keyCode !== KeyCode.KEY_R || !this.inputManager) {
-            return;
-        }
-
-        if (this.activePieceId) {
-            this.inputManager.rotatePiece(this.activePieceId);
-            return;
-        }
-
-        const nextUnlocked = this.puzzleManager?.getPieces().find((piece) => !piece.isLocked());
-        if (nextUnlocked) {
-            this.inputManager.rotatePiece(nextUnlocked.getId());
-        }
     }
 
     private pickPieceAt(worldX: number, worldY: number): PuzzlePiece | null {
@@ -590,7 +360,7 @@ export class PuzzleStage extends Component {
     }
 
     private toWorld(cellX: number, cellY: number): Vec3 {
-        const mapper = this.createBoardMapper();
+        const mapper = this.boardCoordinateMapper;
         if (!mapper) {
             return new Vec3();
         }
@@ -601,7 +371,8 @@ export class PuzzleStage extends Component {
 
     private createBoardMapper(): BoardCoordinateMapper | null {
         const board = this.puzzleManager?.getBoard();
-        if (!board) {
+        const levelData = this.puzzleManager?.getLevelData();
+        if (!board || !levelData) {
             return null;
         }
 
@@ -609,8 +380,8 @@ export class PuzzleStage extends Component {
             boardCenterWorldX: DEFAULT_BOARD_ORIGIN_WORLD_X,
             boardCenterWorldY: DEFAULT_BOARD_ORIGIN_WORLD_Y,
             cellSize: {
-                x: this.puzzleManager?.getLevelData()?.gridCellWidth ?? 24,
-                y: this.puzzleManager?.getLevelData()?.gridCellHeight ?? 24,
+                x: levelData.gridCellWidth,
+                y: levelData.gridCellHeight,
             },
             gridDimentionSize: {
                 x: board.getGridWidth(),
@@ -629,7 +400,7 @@ export class PuzzleStage extends Component {
     }
 
     private snapPieceNodeToCurrentOrigin(pieceId: string): void {
-        const piece = this.puzzleManager?.getPieces().find((item) => item.getId() === pieceId);
+        const piece = this.puzzleManager?.getPiece(pieceId);
         if (!piece) {
             return;
         }
@@ -642,78 +413,18 @@ export class PuzzleStage extends Component {
         pieceIds.forEach((pieceId) => this.snapPieceNodeToCurrentOrigin(pieceId));
     }
 
-    private isRectSwapMergeMode(): boolean {
-        return this.puzzleManager?.getLevelData()?.gameMode === PuzzleGameplayMode.RectSwapMerge;
+    private snapPieceToTrayAndAnimate(pieceId: string): void {
+        const pieceRenderer = this.pieceRenderersById.get(pieceId);
+        if (!pieceRenderer) {
+            return;
+        }
+
+        pieceRenderer.node.setParent(this.pieceTrayLayer);
+        this.animatePieceToTray(pieceId);
     }
 
-    private updateBoardBorders(mergedPieceIds: ReadonlyArray<string>, animate = true): void {
-        const allPiece = this.puzzleManager?.getPieces();
-        for (const pieceId of mergedPieceIds) {
-            const piece = this.puzzleManager?.getPieces().find((item) => item.getId() === pieceId);
-            if (!piece) {
-                continue;
-            }
-
-            let mask = BorderMask.All;
-            const topPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === piece.getCurrentOrigin()?.x && item.getCurrentOrigin()?.y === (piece.getCurrentOrigin()!.y - 1))?.getGroupId();
-            if (topPieceGroupId === piece.getGroupId()) {
-                mask &= ~BorderMask.Top;
-            }
-            const rightPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === (piece.getCurrentOrigin()!.x + 1) && item.getCurrentOrigin()?.y === piece.getCurrentOrigin()?.y)?.getGroupId();
-            if (rightPieceGroupId === piece.getGroupId()) {
-                mask &= ~BorderMask.Right;
-            }
-            const bottomPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === piece.getCurrentOrigin()?.x && item.getCurrentOrigin()?.y === (piece.getCurrentOrigin()!.y + 1))?.getGroupId();
-            if (bottomPieceGroupId === piece.getGroupId()) {
-                mask &= ~BorderMask.Bottom;
-            }
-            const leftPieceGroupId = allPiece?.find((item) => item.getCurrentOrigin()?.x === (piece.getCurrentOrigin()!.x - 1) && item.getCurrentOrigin()?.y === piece.getCurrentOrigin()?.y)?.getGroupId();
-            if (leftPieceGroupId === piece.getGroupId()) {
-                mask &= ~BorderMask.Left;
-            }
-            const borderRenderer = this.boardBorderRenderersByPieceId.get(pieceId);
-            if (borderRenderer) {
-                borderRenderer.setMask(mask, animate);
-            }
-        }
-        // const board = this.puzzleManager?.getBoard();
-        // if (!board) {
-        //     return;
-        // }
-
-        // for (const cell of board.getCells()) {
-        //     const borderRenderer = this.boardBorderRenderersByKey.get(createCoordinateKey(cell.getCoordinate()));
-        //     if (!borderRenderer) {
-        //         continue;
-        //     }
-
-        //     const ownerPieceId = cell.getOwnerPieceId();
-        //     if (!ownerPieceId) {
-        //         borderRenderer.setMask(BorderMask.None, animate);
-        //         continue;
-        //     }
-
-        //     const { x, y } = cell.getCoordinate();
-        //     let mask = BorderMask.All;
-
-        //     if (board.getPieceIdAt({ x, y: y - 1 }) === ownerPieceId) {
-        //         mask &= ~BorderMask.Top;
-        //     }
-
-        //     if (board.getPieceIdAt({ x: x + 1, y }) === ownerPieceId) {
-        //         mask &= ~BorderMask.Right;
-        //     }
-
-        //     if (board.getPieceIdAt({ x, y: y + 1 }) === ownerPieceId) {
-        //         mask &= ~BorderMask.Bottom;
-        //     }
-
-        //     if (board.getPieceIdAt({ x: x - 1, y }) === ownerPieceId) {
-        //         mask &= ~BorderMask.Left;
-        //     }
-
-        //     borderRenderer.setMask(mask, animate);
-        // }
+    private isRectSwapMergeMode(): boolean {
+        return this.puzzleManager?.getLevelData()?.gameMode === PuzzleGameplayMode.RectSwapMerge;
     }
 
     private animateMergedPieces(pieceIds: ReadonlyArray<string>): void {

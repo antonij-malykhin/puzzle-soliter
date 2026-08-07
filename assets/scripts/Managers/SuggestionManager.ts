@@ -1,35 +1,50 @@
-import { WalletManager } from "./WalletManager";
-import { EventBus } from "../Core/Events/EventBus";
-import { GameEventMap } from "../Core/Events/GameEventMap";
-export class SuggestionManager {
-    private wallet: WalletManager;
-    private eventBus: EventBus<GameEventMap>;
-    private suggestionAvailable: boolean = true;
-    private suggestionCount: number = 3;
-    private suggestionPrice: number = 10; // Example price for a suggestion
+import { ProgressionManager } from './ProgressionManager';
+import { EventBus } from '../Core/Events/EventBus';
+import { GameEventMap } from '../Core/Events/GameEventMap';
+import { DEFAULT_SUGGESTION_COUNT, DEFAULT_SUGGESTION_PRICE } from '../Core/Config/GameConstants';
 
-    constructor(wallet: WalletManager, eventBus: EventBus<GameEventMap>, suggestionCount: number = 3, suggestionPrice: number = 10) {
-        this.wallet = wallet;
-        this.eventBus = eventBus;
+export class SuggestionManager {
+    private suggestionCount: number;
+
+    public constructor(
+        private readonly progressionManager: ProgressionManager,
+        private readonly eventBus: EventBus<GameEventMap>,
+        suggestionCount: number = DEFAULT_SUGGESTION_COUNT,
+        public readonly suggestionPrice: number = DEFAULT_SUGGESTION_PRICE,
+    ) {
         this.suggestionCount = suggestionCount;
-        this.suggestionPrice = suggestionPrice;
     }
 
     public isSuggestionAvailable(): boolean {
-        return this.suggestionAvailable && this.suggestionCount > 0;
+        return this.suggestionCount > 0;
     }
 
-    public provideSuggestion(): void {
-        if (this.isSuggestionAvailable()) {
-            this.suggestionCount--;
-            this.eventBus.emit('SuggestionProvided', { newCount: this.suggestionCount });
-        } else if (this.suggestionAvailable && this.suggestionCount === 0) {
-            if (this.wallet.getBalance() >= this.suggestionPrice) {
-                this.wallet.decreaseBalance(this.suggestionPrice);
-                this.suggestionCount++;
-            } else {
-                this.suggestionAvailable = false;
-            }
+    public getSuggestionCount(): number {
+        return this.suggestionCount;
+    }
+
+    /**
+     * Uses one free suggestion, or buys one for coins when the free pool is empty.
+     * A successfully provided suggestion is reported through 'SuggestionProvided';
+     * PuzzleManager reacts by publishing the matching pair via 'SuggestionResult'.
+     */
+    public async provideSuggestion(): Promise<boolean> {
+        if (this.suggestionCount > 0) {
+            this.consumeSuggestion();
+            return true;
         }
+
+        if (this.progressionManager.getCoins() < this.suggestionPrice) {
+            return false;
+        }
+
+        await this.progressionManager.spendCoins(this.suggestionPrice);
+        this.consumeSuggestion();
+        return true;
+    }
+
+    private consumeSuggestion(): void {
+        this.suggestionCount -= 1;
+        this.eventBus.emit('SuggestionProvided', { newCount: this.suggestionCount });
     }
 }

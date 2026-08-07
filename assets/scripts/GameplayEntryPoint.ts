@@ -1,23 +1,21 @@
 import { _decorator, Component, UITransform } from 'cc';
 import { PuzzleStage } from './UI/Puzzle/PuzzleStage';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
-import { EventBus } from './Core/Events/EventBus';
 import { ServiceContainer } from './Core/ServiceContainer';
 import { ImageService } from './Services/ImageService';
 import { PuzzleManager } from './Managers/PuzzleManager';
 import { SuggestionManager } from './Managers/SuggestionManager';
 import { InputManager } from './Input/InputManager';
-import { AudioManager } from './Managers/AudioManager';
-import { LocalizationManager } from './Managers/LocalizationManager';
 import { ProgressionManager } from './Managers/ProgressionManager';
 import { LevelService } from './Services/LevelService';
 import { GameManager } from './Managers/GameManager';
+import { EventBus } from './Core/Events/EventBus';
 import { GameEventMap } from './Core/Events/GameEventMap';
-import { GameplayController } from './Controllers/GameplayController';
-import { LevelData } from './Data/Models/LevelData';
-import { SceneManager } from './Managers/SceneManager';
 import { GameplayUI } from './UI/GameplayUI';
+import { SceneManager } from './Managers/SceneManager';
 import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
+import { GameplaySession } from './Controllers/GameplaySession';
+import { YandexAdManager } from './Managers/YandexAdManager';
 
 const { ccclass, property } = _decorator;
 
@@ -32,108 +30,37 @@ export class GameplayEntryPoint extends Component {
     @property(GameplayUI)
     private gameplayUI: GameplayUI | null = null;
 
-    private settingsSubscription: (() => void) | null = null;
+    private session: GameplaySession | null = null;
 
-    private progressionManager: ProgressionManager | null = null;
-    private imageService!: ImageService;
-    private levelService!: LevelService;
-    private gameManager!: GameManager;
-    private puzzleManager!: PuzzleManager;
-    private inputManager!: InputManager;
-    private eventBus!: EventBus<GameEventMap>;
-    private sceneManager: SceneManager | null = null;
-    private gameplayController: GameplayController | null = null;
-    private boardLayerSize: { x: number; y: number } | null = null;
-    private levelData!: LevelData;
-    private boardOrigine!: { x: number; y: number; };
-    private spriteFrameSliceService!: SpriteFrameSliceService;
-    private suggestionManager!: SuggestionManager;
-    
     protected async start(): Promise<void> {
-        PerformanceMonitor.clear();
-        PerformanceMonitor.setEnabled(true);
-        PerformanceMonitor.mark('game-start');
-        this.requestServices();
-        await this.updateInputManager();
-
-        this.settingsSubscription = this.eventBus!.on('SettingsChanged', ({ settings }) => {
-            ServiceContainer.get(AudioManager).applySettings(settings);
-            ServiceContainer.get(LocalizationManager).setLanguage(settings.language);
-        });
-
-        this.puzzleManager.initializeLevel(this.levelData);
-        this.puzzleStage?.initialize(
-            this.puzzleManager,
-            this.inputManager,
-            this.eventBus!,
-            this.imageService,
-            this.spriteFrameSliceService
-        );
-        
-        // Warm-up image loading cache for the active level.
-        await this.imageService.getImage(this.levelData.imageId).catch(() => {
-            // Placeholder content may be absent at early MVP stages.
-        });
-        
-        //TODO: Разделить инициализацию UI root на отдельные методы для лобби и геймплея, чтобы не дублировать код
-        await this.gameplayController?.initialize(
-            this.eventBus!,
-            this.gameplayUI!,
-            this.gameManager,
-            this.sceneManager!,
-            this.progressionManager!,
-            this.suggestionManager!,
-            this.progressionManager!.getCurrentLevelId()
+        this.session = new GameplaySession(
+            {
+                eventBus: ServiceContainer.get<EventBus<GameEventMap>>(EventBus),
+                imageService: ServiceContainer.get(ImageService),
+                levelService: ServiceContainer.get(LevelService),
+                gameManager: ServiceContainer.get(GameManager),
+                puzzleManager: ServiceContainer.get(PuzzleManager),
+                inputManager: ServiceContainer.get(InputManager),
+                sceneManager: ServiceContainer.get(SceneManager),
+                progressionManager: ServiceContainer.get(ProgressionManager),
+                suggestionManager: ServiceContainer.get(SuggestionManager),
+                yandexAdManager: ServiceContainer.get(YandexAdManager),
+                spriteFrameSliceService: ServiceContainer.get(SpriteFrameSliceService),
+            },
+            {
+                puzzleStage: this.puzzleStage,
+                gameplayUI: this.gameplayUI,
+                boardUITransform: this.boardUITransform,
+            },
         );
 
-        this.eventBus.emit('LevelLoaded', {
-            levelId: this.levelData.id,
-            gridColumnCount: this.levelData.gridColumnCount,
-            gridRowCount: this.levelData.gridRowCount,
-            gridCellWidth: this.levelData.gridCellWidth,
-            gridCellHeight: this.levelData.gridCellHeight
-        });
-
-        PerformanceMonitor.measure('game-init', 'game-start');
-        PerformanceMonitor.reportMemory();
-        this.gameplayController?.startGameplay();
-    }
-
-    private async updateInputManager() {
-        const levelId = this.progressionManager!.getCurrentLevelId();
-        this.levelData = await this.levelService!.getLevel(levelId);
-        this.boardLayerSize = this.boardUITransform!.contentSize;
-        this.boardOrigine = { x: this.boardUITransform?.node.worldPosition.x ?? 0, y: this.boardUITransform?.node.worldPosition.y ?? 0 };
-        this.levelData.gridCellWidth = this.boardLayerSize.x / this.levelData.gridColumnCount;
-        this.levelData.gridCellHeight = this.boardLayerSize.y / this.levelData.gridRowCount;
-        this.inputManager.setupBoardConfiguration(this.levelData, this.boardOrigine);
-    }
-
-    private requestServices() {
-        this.spriteFrameSliceService = ServiceContainer.get(SpriteFrameSliceService);
-        this.gameplayController = new GameplayController();
-        this.sceneManager = ServiceContainer.get(SceneManager);
-        this.progressionManager = ServiceContainer.get(ProgressionManager);
-        this.imageService = ServiceContainer.get(ImageService);
-        this.levelService = ServiceContainer.get(LevelService);
-        this.gameManager = ServiceContainer.get(GameManager);
-        this.puzzleManager = ServiceContainer.get(PuzzleManager);
-        this.inputManager = ServiceContainer.get(InputManager);
-        this.eventBus = ServiceContainer.get(EventBus);
-        this.suggestionManager = ServiceContainer.get(SuggestionManager);
+        await this.session.start();
     }
 
     protected onDestroy(): void {
-        this.dispose();
+        this.session?.dispose();
+        this.session = null;
         PerformanceMonitor.report();
         PerformanceMonitor.reportMemory();
-    }
-
-    public dispose(): void {
-        this.settingsSubscription?.();
-        this.gameplayController?.dispose();
-        this.gameplayController = null;
-        this.puzzleStage?.dispose();
-        this.puzzleManager?.dispose();
     }
 }

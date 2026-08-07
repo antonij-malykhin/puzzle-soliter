@@ -6,7 +6,6 @@ export interface GameEventMap {
     GameStarted: { levelId: string };
     GameStateChanged: { previous: GameState; current: GameState };
     LevelLoaded: { levelId: string; gridColumnCount: number; gridRowCount: number; gridCellWidth: number; gridCellHeight: number;};
-    PiecePicked: { pieceId: string };
     PieceMoved: { pieceId: string; origin: { x: number; y: number } };
     PiecePlaced: { pieceId: string; lockedPieces: number; totalPieces: number };
     PiecesSwapped: {

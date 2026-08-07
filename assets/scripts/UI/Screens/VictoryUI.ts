@@ -1,4 +1,4 @@
-import { _decorator, Button } from 'cc';
+import { _decorator, Button, ParticleSystem2D } from 'cc';
 import { UIView } from '../Base/UIView';
 
 const { ccclass, property } = _decorator;
@@ -7,6 +7,9 @@ const { ccclass, property } = _decorator;
 export class VictoryUI extends UIView {
     @property(Button)
     private nextButton: Button | null = null;
+
+    @property([ParticleSystem2D])
+    private particlesEffect: Array<ParticleSystem2D> = [];
 
     private nextHandler: (() => void) | null = null;
 
@@ -17,6 +20,11 @@ export class VictoryUI extends UIView {
 
     public setNextHandler(handler: () => void): void {
         this.nextHandler = handler;
+    }
+
+    override async show(): Promise<void> {
+        await super.show();
+        this.particlesEffect.forEach(effect => effect.resetSystem());
     }
 
     private bindNextButton(): void {

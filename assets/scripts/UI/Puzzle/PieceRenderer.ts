@@ -1,4 +1,4 @@
-import { _decorator, Color, Component, Graphics, log, Node, Sprite, SpriteFrame, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, Node, Sprite, SpriteFrame, UITransform } from 'cc';
 import { Shape } from '../../Puzzle/Shape';
 import { CellCoordinate } from '../../Puzzle/Types';
 import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
@@ -16,6 +16,7 @@ const OUTLINE_DARKEN_STEP = 45;
 const TOP_LEFT_ANCHOR_X = 0;
 const TOP_LEFT_ANCHOR_Y = 1;
 const MIN_CELL_SIZE = 1;
+const CELL_NODE_PREFIX = 'Cell_';
 
 interface PieceImageSliceOptions {
     readonly sourceSpriteFrame: SpriteFrame;
@@ -49,10 +50,8 @@ export class PieceRenderer extends Component {
     
     public render(pieceId: string, shape: Shape, imageSliceOptions?: PieceImageSliceOptions): void {
         this.ensureSprite();
-        //log(`[PieceRenderer] Rendering piece with shape:`, shape, `and image slice options:`, imageSliceOptions);
         const color = this.resolvePieceColor(pieceId);
         this.applySize(shape, color, imageSliceOptions);
-        //this.applyCellMarkup(shape, color);
     }
 
     public setCellSize(cellSize: {x: number; y: number}): void {
@@ -110,8 +109,9 @@ export class PieceRenderer extends Component {
         this.uiTransform?.setAnchorPoint(TOP_LEFT_ANCHOR_X, TOP_LEFT_ANCHOR_Y);
 
         this.uiTransform?.setContentSize(bounds.width * this.placeholderCellSize.x, bounds.height * this.placeholderCellSize.y);
+        this.removeCellNodes();
         for (const cell of cells) {
-            const cellNode = new Node(`Cell_${cell.x}_${cell.y}`);
+            const cellNode = new Node(`${CELL_NODE_PREFIX}${cell.x}_${cell.y}`);
             cellNode.setParent(this.node);
             cellNode.setSiblingIndex(0);
             const cellTransform = cellNode.addComponent(UITransform);
@@ -136,4 +136,9 @@ export class PieceRenderer extends Component {
         }
     }
 
+    private removeCellNodes(): void {
+        this.node.children
+            .filter((child) => child.name.startsWith(CELL_NODE_PREFIX))
+            .forEach((child) => child.destroy());
+    }
 }

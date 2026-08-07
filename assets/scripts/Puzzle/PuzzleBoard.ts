@@ -18,7 +18,7 @@ export class PuzzleBoard {
         for (let y = 0; y < gridHeight; y += 1) {
             for (let x = 0; x < gridWidth; x += 1) {
                 const coordinate: CellCoordinate = { x, y };
-                this.cells.set(createCoordinateKey(coordinate), new PuzzleCell(coordinate, y * gridWidth + x));
+                this.cells.set(createCoordinateKey(coordinate), new PuzzleCell(coordinate));
             }
         }
     }
@@ -29,10 +29,6 @@ export class PuzzleBoard {
 
     public getGridHeight(): number {
         return this.gridHeight;
-    }
-
-    public getCells(): ReadonlyArray<PuzzleCell> {
-        return [...this.cells.values()];
     }
 
     public isInsideBounds(coordinate: CellCoordinate): boolean {
@@ -88,10 +84,6 @@ export class PuzzleBoard {
         });
 
         this.occupiedByPiece.delete(pieceId);
-    }
-
-    public isFullyOccupied(): boolean {
-        return this.getCells().every((cell) => cell.getOwnerPieceId() != null && cell.getOwnerPieceId() != undefined);
     }
 
     public toAbsoluteCoordinates(shape: Shape, origin: CellCoordinate): ReadonlyArray<CellCoordinate> {

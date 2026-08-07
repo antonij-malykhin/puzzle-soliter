@@ -64,7 +64,7 @@ export class Shape {
             uniqueByKey.set(createCoordinateKey(cell), { x: cell.x, y: cell.y });
         });
 
-        const uniqueCells = [...uniqueByKey.values()];
+        const uniqueCells = Array.from(uniqueByKey.values());
         const minX = Math.min(...uniqueCells.map((cell) => cell.x));
         const minY = Math.min(...uniqueCells.map((cell) => cell.y));
 

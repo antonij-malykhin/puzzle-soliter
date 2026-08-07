@@ -6,9 +6,89 @@
   "common": {
     "polyfills": {
       "asyncFunctions": true
-    }
+    },
+    "name": "PuzzleMozaicDebug",
+    "debug": true,
+    "sourceMaps": true,
+    "useSplashScreen": false
   },
   "BuildTaskManager": {
-    "taskMap": {}
+    "taskMap": {
+      "1785949278169": {
+        "type": "build",
+        "id": "1785949278169",
+        "progress": 1,
+        "state": "success",
+        "stage": "build",
+        "message": "06.08.2026 21:53:28 build success in 52 s!",
+        "detailMessage": "Asset DB is resume!\r",
+        "options": {
+          "name": "PuzzleMozaicDebug",
+          "server": "",
+          "engineModulesConfigKey": "defaultConfig",
+          "platform": "web-desktop",
+          "buildPath": "project://build",
+          "debug": true,
+          "buildMode": "normal",
+          "mangleProperties": false,
+          "md5Cache": false,
+          "skipCompressTexture": false,
+          "sourceMaps": true,
+          "overwriteProjectSettings": {
+            "includeModules": {
+              "gfx-webgl2": "on",
+              "physics": "inherit-project-setting",
+              "physics-2d": "inherit-project-setting"
+            },
+            "macroConfig": {
+              "cleanupImageCache": "inherit-project-setting"
+            }
+          },
+          "nativeCodeBundleMode": "both",
+          "polyfills": {
+            "asyncFunctions": true
+          },
+          "experimentalEraseModules": false,
+          "startSceneAssetBundle": false,
+          "bundleConfigs": [],
+          "inlineEnum": true,
+          "useBuiltinServer": false,
+          "md5CacheOptions": {
+            "excludes": [],
+            "includes": [],
+            "replaceOnly": [],
+            "handleTemplateMd5Link": true
+          },
+          "mainBundleIsRemote": false,
+          "mainBundleCompressionType": "merge_dep",
+          "useSplashScreen": false,
+          "bundleCommonChunk": false,
+          "packAutoAtlas": true,
+          "startScene": "817be21b-065c-48ad-adca-d685aa95dd73",
+          "outputName": "web-desktop",
+          "taskName": "web-desktop",
+          "scenes": [
+            {
+              "url": "db://assets/scenes/bootstrap.scene",
+              "uuid": "817be21b-065c-48ad-adca-d685aa95dd73"
+            },
+            {
+              "url": "db://assets/scenes/gameplay.scene",
+              "uuid": "6565a80b-d07e-4411-b29d-df5f03702738"
+            },
+            {
+              "url": "db://assets/scenes/lobby.scene",
+              "uuid": "309d49cb-c3a7-4827-bdd3-39adf3ad4323"
+            }
+          ],
+          "wasmCompressionMode": false,
+          "packages": {},
+          "__version__": "1.3.9",
+          "logDest": "project://temp/builder/log/web-desktop05.08.2026 20-01.log"
+        },
+        "time": "06.08.2026 21:52:35",
+        "dirty": false
+      }
+    }
   }
 }

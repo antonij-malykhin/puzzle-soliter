@@ -11,6 +11,7 @@ export interface GameSettings {
     vibrationEnabled: boolean;
     autoSnapEnabled: boolean;
     snapThreshold: number;
+    adsDisabled: boolean;
 }
 
 export const createDefaultGameSettings = (): GameSettings => ({
@@ -20,4 +21,5 @@ export const createDefaultGameSettings = (): GameSettings => ({
     vibrationEnabled: true,
     autoSnapEnabled: true,
     snapThreshold: DEFAULT_SNAP_THRESHOLD,
+    adsDisabled: false,
 });

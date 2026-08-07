@@ -81,8 +81,4 @@ export class LevelGridManager extends Component {
         // Принудительное обновление Layout
         this.layout.updateLayout();
     }
-
-    private clearGrid() {
-        this.node.destroyAllChildren();
-    }
 }

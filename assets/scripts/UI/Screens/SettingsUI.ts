@@ -1,4 +1,4 @@
-import { _decorator, Color, Label, Node, UITransform } from 'cc';
+import { _decorator, Button, Node, ProgressBar } from 'cc';
 import { GameSettings } from '../../Data/Models/GameSettings';
 import { UIView } from '../Base/UIView';
 
@@ -6,39 +6,54 @@ const { ccclass, property } = _decorator;
 
 @ccclass('SettingsUI')
 export class SettingsUI extends UIView {
-    @property(Label)
-    private settingsLabel: Label | null = null;
+    @property(Button)
+    private settingsButton: Button | null = null;
+
+    @property(Node)
+    private settingsPanel: Node | null = null;
+
+    @property(Button)
+    private closeButton: Button | null = null;
+
+    @property(ProgressBar)
+    private musicVolumeBar: ProgressBar | null = null;
+
+    @property(ProgressBar)
+    private sfxVolumeBar: ProgressBar | null = null;
 
     protected onLoad(): void {
         super.onLoad();
-        this.settingsLabel = this.settingsLabel ?? this.createLabelNode();
+        if (!this.settingsButton) {
+            throw new Error('Settings button is not assigned.');
+        }
+
+        this.settingsButton.node.on('click', this.onSettingsButtonClicked, this);
+        this.closeButton?.node.on('click', this.onCloseButtonClicked, this);
+    }
+
+    private onCloseButtonClicked(): void {
+        if (!this.settingsPanel) {
+            throw new Error('Settings panel is not assigned.');
+        }
+
+        this.settingsPanel.active = false;
+    }
+    
+    private onSettingsButtonClicked(): void {
+        this.showSettingsPanel();
+    }
+
+    private showSettingsPanel(): void {
+        if (!this.settingsPanel) {
+            throw new Error('Settings panel is not assigned.');
+        }
+
+        this.settingsPanel.active = true;
     }
 
     public setSettings(settings: GameSettings): void {
-        if (!this.settingsLabel) {
+        if (!this.settingsButton) {
             return;
         }
-
-        this.settingsLabel.string = [
-            `Lang: ${settings.language}`,
-            `Music: ${settings.musicVolume.toFixed(2)}`,
-            `SFX: ${settings.sfxVolume.toFixed(2)}`,
-            `Snap: ${settings.autoSnapEnabled ? 'ON' : 'OFF'}`,
-        ].join('\n');
-    }
-
-    private createLabelNode(): Label {
-        const labelNode = new Node('SettingsLabel');
-        labelNode.setParent(this.node);
-        labelNode.setPosition(-500, 210, 0);
-        const transform = labelNode.addComponent(UITransform);
-        transform.setContentSize(320, 130);
-
-        const label = labelNode.addComponent(Label);
-        label.fontSize = 18;
-        label.lineHeight = 22;
-        label.color = new Color(235, 235, 235, 255);
-        label.string = 'Settings';
-        return label;
     }
 }

@@ -1,4 +1,6 @@
-import { _decorator, Component, log, SpriteFrame, UITransform } from 'cc';
+import { _decorator, Button, Component, log, SpriteFrame, UITransform } from 'cc';
+import { EventBus } from './Core/Events/EventBus';
+import { GameEventMap } from './Core/Events/GameEventMap';
 import { LobbyUI } from './UI/Screens/LobbyUI';
 import { LobbyController } from './Controllers/LobbyController';
 import { ServiceContainer } from './Core/ServiceContainer';
@@ -11,6 +13,7 @@ import { LevelService } from './Services/LevelService';
 import { SceneManager } from './Managers/SceneManager';
 import { GAMEPLAY_SCENE_NAME } from './Core/Config/GameConstants';
 import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
+import { YandexAdManager } from './Managers/YandexAdManager';
 
 const { ccclass, property } = _decorator;
 
@@ -22,10 +25,14 @@ export class LobbyEntryPoint extends Component {
     @property(UITransform)
     private lobbyLevelCardRootUiTransform!: UITransform;
 
+    @property(Button)
+    private debugCompleteRegionButton: Button | null = null;
+
     private regionCardCount: number = 25;
     private onPlayButtonClicked: () => void = () => {};
     private lobbyController!: LobbyController;
     private progressionManager!: ProgressionManager;
+    private eventBus!: EventBus<GameEventMap>;
     private catalogData: LevelCatalogData | null = null;
     private lobbyFlipLevelId: string | null = null;
     private levelService!: LevelService;
@@ -33,6 +40,7 @@ export class LobbyEntryPoint extends Component {
     private sceneService!: SceneManager;
     private imageSliceService!: SpriteFrameSliceService;
     private regionNumber: number = 1;
+    private yandexAdManager!: YandexAdManager;
 
     protected async onLoad(): Promise<void> {
         log('LobbyEntryPoint: Starting lobby initialization...');
@@ -41,15 +49,30 @@ export class LobbyEntryPoint extends Component {
         this.requestServices();
         await this.initialize();
         const regionImage = await this.imageService.getImage(this.catalogData!.regionImageId);
+
+        if (this.progressionManager.isCurrentRegionCompleted()) {
+            this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+            await this.lobbyUI.show();
+            log('LobbyEntryPoint: Region complete screen shown.');
+            return;
+        }
+
         const lobbyCards = await this.getLobbyCards(regionImage);
-        this.lobbyController.initialize(this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
+        await this.lobbyController.initialize(this.eventBus, this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
             onPlayRequested: this.onPlayButtonClicked.bind(this),
             lobbyCards: lobbyCards,
         });
-        this.lobbyUI.setPlayHandler(this.onPlayButtonClicked.bind(this));
         
         log('LobbyEntryPoint: Lobby initialized.');
         this.lobbyController.startLobby();
+        this.yandexAdManager.showInterstitialIfAllowed();
+
+        if (this.debugCompleteRegionButton) {
+            this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
+                this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+                await this.lobbyUI.show();
+            }, this);
+        }
     }
 
     private async initialize() {
@@ -65,10 +88,17 @@ export class LobbyEntryPoint extends Component {
         this.levelService = ServiceContainer.get(LevelService);
         this.imageService = ServiceContainer.get(ImageService);
         this.sceneService = ServiceContainer.get(SceneManager);
+        this.eventBus = ServiceContainer.get(EventBus);
+        this.yandexAdManager = ServiceContainer.get(YandexAdManager);
     }
 
     private loadGameplayScene() {
         this.sceneService.loadGameplayScene(GAMEPLAY_SCENE_NAME);
+    }
+
+    private async loadNextRegion(): Promise<void> {
+        await this.progressionManager.advanceToNextRegion();
+        this.sceneService.loadLobbyScene();
     }
 
     private async getLobbyCards(regionImage: SpriteFrame): Promise<ReadonlyArray<LobbyLevelCardPresentation>> {
@@ -87,42 +117,30 @@ export class LobbyEntryPoint extends Component {
 
             const backSpriteFrame = await this.imageService.getImage(card.cardBackFrontImageId!);
 
-			return {
-				levelId: card.levelId,
-				levelNumber: card.levelNumber,
-				gridX: card.gridX,
-				gridY: card.gridY,
+            return {
+                levelId: card.levelId,
+                levelNumber: card.levelNumber,
+                gridX: card.gridX,
+                gridY: card.gridY,
                 width: catalogLevelCardWidth,
                 height: catalogLevelCardHeight,
-				isUnlocked: card.isUnlocked,
-				isCompleted: card.isCompleted,
-				isCurrent: card.isCurrent,
-				shouldAnimateFlip: card.shouldAnimateFlip,
-				frontSpriteFrame: slicedRegionImage,
+                isUnlocked: card.isUnlocked,
+                isCompleted: card.isCompleted,
+                isCurrent: card.isCurrent,
+                shouldAnimateFlip: card.shouldAnimateFlip,
+                frontSpriteFrame: slicedRegionImage,
                 backSpriteFrame: backSpriteFrame,
                 regionId: `region-${Math.floor((card.levelNumber - 1) / this.regionCardCount) + 1}`,
                 regionCardIndex: (card.levelNumber - 1) % this.regionCardCount,
                 regionCardCount: this.regionCardCount,
-			};
-		};
+            };
+        };
 
-        if (!this.catalogData || this.catalogData.levels.length === 0) {
-            const cards = this.catalogData!.levels.map((level) => ({
-                levelId: level.levelId,
-                levelNumber: level.levelNumber,
-                gridX: level.gridX,
-                gridY: level.gridY,
-                isUnlocked: this.progressionManager!.isUnlocked(level.levelId),
-                isCompleted: this.progressionManager!.isCompleted(level.levelId),
-                isCurrent: currentLevelId === level.levelId,
-                shouldAnimateFlip: this.lobbyFlipLevelId === level.levelId,
-                cardBackFrontImageId: level.cardBackFrontImageId, // Placeholder for card back/front image ID
-            }));
-
-			return Promise.all(cards.map((card) => buildPresentation(card)));
+        if (!this.catalogData) {
+            throw new Error('Level catalog is not loaded.');
         }
 
-        const cards = this.catalogData!.levels.map((entry) => ({
+        const cards = this.catalogData.levels.map((entry) => ({
             levelId: entry.levelId,
             levelNumber: entry.levelNumber,
             gridX: entry.gridX,
@@ -134,6 +152,6 @@ export class LobbyEntryPoint extends Component {
             shouldAnimateFlip: this.lobbyFlipLevelId === entry.levelId,
         }));
 
-		return Promise.all(cards.map((card) => buildPresentation(card)));
+        return Promise.all(cards.map((card) => buildPresentation(card)));
     }
 }

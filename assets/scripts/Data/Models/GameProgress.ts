@@ -1,3 +1,5 @@
+export const DEFAULT_STARTING_COINS = 50;
+
 export interface GameProgress {
     completedLevelIds: string[];
     starsByLevel: Record<string, number>;
@@ -5,6 +7,7 @@ export interface GameProgress {
     currentLevelId: string | null;
     recentlyCompletedLevelId: string | null;
     regionNumber: number;
+    coins: number;
 }
 
 export const createDefaultGameProgress = (): GameProgress => ({
@@ -14,4 +17,5 @@ export const createDefaultGameProgress = (): GameProgress => ({
     currentLevelId: null,
     recentlyCompletedLevelId: null,
     regionNumber: 1,
+    coins: DEFAULT_STARTING_COINS,
 });

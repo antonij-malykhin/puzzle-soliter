@@ -13,12 +13,6 @@ export class GameplayUI extends Component {
     @property(GameUI)
     private gameUI!: GameUI;
 
-    @property(PauseUI)
-    private pauseUI!: PauseUI;
-
-    @property(SettingsUI)
-    private settingsUI!: SettingsUI;
-
     @property(VictoryUI)
     private victoryUI!: VictoryUI;
 
@@ -26,7 +20,6 @@ export class GameplayUI extends Component {
 
     protected onLoad(): void {
         this.gameUI.hide();
-        this.pauseUI.hide();
         this.victoryUI.hide();
     }
 
@@ -43,23 +36,7 @@ export class GameplayUI extends Component {
         this.disposables.push(eventBus.on('GameStarted', ({ levelId }) => {
             this.gameUI?.initialize(levelId, eventBus, options.onBackToLobbyRequested, options.onSuggestionRequested);
             this.victoryUI.hide();
-            this.pauseUI.hide();
             this.gameUI.show();
-        }));
-
-        this.disposables.push(eventBus.on('GameStateChanged', async ({ current }) => {
-            if (current === GameState.Paused) {
-                await this.pauseUI.show();
-                return;
-            }
-
-            if (current === GameState.Playing) {
-                await this.pauseUI.hide();
-            }
-        }));
-
-        this.disposables.push(eventBus.on('SettingsChanged', ({ settings }) => {
-            this.settingsUI.setSettings(settings);
         }));
 
         this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, elapsedSeconds }) => {

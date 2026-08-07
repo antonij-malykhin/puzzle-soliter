@@ -8,7 +8,7 @@ const { ccclass, property } = _decorator;
 export class SuggestionUI extends Component {
     @property(Label)
     private suggestionCountLabel: Label | null = null;
-    
+
     private disposables: Array<() => void> = [];
 
     public setSuggestionCount(count: number): void {
@@ -16,14 +16,17 @@ export class SuggestionUI extends Component {
     }
 
     public initialize(eventBus: EventBus<GameEventMap>) : void {
+        this.disposables.forEach((dispose) => dispose());
+        this.disposables.length = 0;
+
         const disposable = eventBus.on('SuggestionProvided', ({ newCount }) => {
             this.setSuggestionCount(newCount);
         });
         this.disposables.push(disposable);
     }
-    
+
     protected onDestroy(): void {
-        this.disposables.forEach(dispose => dispose());
-        this.disposables = [];
+        this.disposables.forEach((dispose) => dispose());
+        this.disposables.length = 0;
     }
 }

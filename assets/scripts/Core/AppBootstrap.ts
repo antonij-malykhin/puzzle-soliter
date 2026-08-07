@@ -7,7 +7,6 @@ import { SaveManager } from '../Managers/SaveManager';
 import { SceneManager } from '../Managers/SceneManager';
 import { SettingsManager } from '../Managers/SettingsManager';
 import { ProgressionManager } from '../Managers/ProgressionManager';
-import { LocalStorageProvider } from '../Services/Storage/LocalStorageProvider';
 import { LevelService } from '../Services/LevelService';
 import { ResourcesLevelProvider } from '../Services/Content/ResourcesLevelProvider';
 import { ImageService } from '../Services/ImageService';
@@ -17,16 +16,19 @@ import { PuzzleValidator } from '../Validation/PuzzleValidator';
 import { InputManager } from '../Input/InputManager';
 import { DragSystem } from '../Input/DragSystem';
 import { RotationSystem } from '../Input/RotationSystem';
-import {
-    DEFAULT_BOARD_ORIGIN_WORLD_X,
-    DEFAULT_BOARD_ORIGIN_WORLD_Y,
-} from './Config/GameConstants';
 import { _decorator, Component, director } from 'cc';
 import { ServiceContainer } from './ServiceContainer';
-import { AppConfigService } from '../Services/AppConfigService';
 import { SpriteFrameSliceService } from '../Services/SpriteFrameSliceService';
 import { SuggestionManager } from '../Managers/SuggestionManager';
 import { WalletManager } from '../Managers/WalletManager';
+import { YandexService } from '../Services/YandexService';
+import { CloudStorageProvider } from '../Services/Storage/CloudStorageProvider';
+import { YandexAdManager } from '../Managers/YandexAdManager';
+import { IapManager } from '../Managers/IapManager';
+import { PuzzleGenerator } from '../Generation/PuzzleGenerator';
+import { RectSwapGenerationStrategy } from '../Generation/RectSwapGenerationStrategy';
+import { BacktrackingGenerationStrategy } from '../Generation/BacktrackingGenerationStrategy';
+import { PieceFactory } from '../Generation/PieceFactory';
 
 const { ccclass } = _decorator;
 
@@ -38,45 +40,46 @@ export class AppBootstrap extends Component {
         this.registryServices();
         await this.initializeServices();
         await ServiceContainer.get(SceneManager).loadLobbyScene();
+        ServiceContainer.get(YandexService).signalReady();
     }
 
     private async initializeServices() {
+        await ServiceContainer.get(YandexService).initialize();
         await ServiceContainer.get(SettingsManager).initialize();
         await ServiceContainer.get(ProgressionManager).initialize();
+        await ServiceContainer.get(IapManager).initialize();
     }
 
     private registryServices() {
         const spriteFrameSliceService = new SpriteFrameSliceService();
         const eventBus = new EventBus<GameEventMap>();
-        const saveManager = new SaveManager(new LocalStorageProvider());
+        const yandexService = new YandexService();
+        const saveManager = new SaveManager(new CloudStorageProvider(yandexService));
         const settingsManager = new SettingsManager(saveManager, eventBus);
         const audioManager = new AudioManager();
         const localizationManager = new LocalizationManager();
         const sceneManager = new SceneManager();
         const gameManager = new GameManager(eventBus);
         const levelService = new LevelService(new ResourcesLevelProvider());
-        const progressionManager = new ProgressionManager(saveManager, levelService);
-        const imageService = new ImageService(new ResourcesImageLoader());
-        const appConfigService = new AppConfigService();
         const walletManager = new WalletManager(eventBus);
-        const suggestionManager = new SuggestionManager(walletManager, eventBus, 3, 10);
+        const progressionManager = new ProgressionManager(saveManager, levelService, walletManager);
+        const imageService = new ImageService(new ResourcesImageLoader());
+        const suggestionManager = new SuggestionManager(progressionManager, eventBus);
+        const yandexAdManager = new YandexAdManager(yandexService, settingsManager, progressionManager);
+        const iapManager = new IapManager(yandexService, progressionManager, settingsManager);
+        const puzzleGenerator = new PuzzleGenerator(
+            new RectSwapGenerationStrategy(),
+            new BacktrackingGenerationStrategy(),
+        );
         const puzzleManager = new PuzzleManager(
             eventBus,
             gameManager,
-            new PuzzleValidator()
+            new PuzzleValidator(),
+            new PieceFactory(puzzleGenerator),
         );
 
         const inputManager = new InputManager(
-            new DragSystem(
-                puzzleManager,
-                {
-                    originWorldX: DEFAULT_BOARD_ORIGIN_WORLD_X,
-                    originWorldY: DEFAULT_BOARD_ORIGIN_WORLD_Y,
-                    cellSize: { x: 300, y: 300 },
-                    gridDimentionSize: { x: 3, y: 3 },
-                },
-                10,
-            ),
+            new DragSystem(puzzleManager),
             new RotationSystem(puzzleManager),
         );
         
@@ -93,8 +96,10 @@ export class AppBootstrap extends Component {
         ServiceContainer.register(ProgressionManager, progressionManager);
         ServiceContainer.register(ImageService, imageService);
         ServiceContainer.register(PuzzleManager, puzzleManager);
-        ServiceContainer.register(AppConfigService, appConfigService);
         ServiceContainer.register(SuggestionManager, suggestionManager);
         ServiceContainer.register(WalletManager, walletManager);
+        ServiceContainer.register(YandexService, yandexService);
+        ServiceContainer.register(YandexAdManager, yandexAdManager);
+        ServiceContainer.register(IapManager, iapManager);
     }
 }

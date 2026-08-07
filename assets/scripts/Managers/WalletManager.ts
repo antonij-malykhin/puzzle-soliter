@@ -9,12 +9,25 @@ export class WalletManager {
         this.eventBus = eventBus;
     }
 
-    public addBalance(amount: number) {
+    public setBalance(amount: number): void {
+        if (amount < 0) {
+            throw new Error("Balance cannot be negative");
+        }
+
+        this.balance = amount;
+        this.eventBus.emit('WalletBalanceChanged', { newBalance: this.balance });
+    }
+
+    public addBalance(amount: number): void {
+        if (amount < 0) {
+            throw new Error("Amount to add cannot be negative");
+        }
+
         this.balance += amount;
         this.eventBus.emit('WalletBalanceChanged', { newBalance: this.balance });
     }
 
-    public decreaseBalance(amount: number) {
+    public decreaseBalance(amount: number): void {
         if (amount > this.balance) {
             throw new Error("Insufficient balance");
         }
@@ -27,7 +40,7 @@ export class WalletManager {
         this.eventBus.emit('WalletBalanceChanged', { newBalance: this.balance });
     }
 
-    public getBalance() {
+    public getBalance(): number {
         return this.balance;
     }
 }

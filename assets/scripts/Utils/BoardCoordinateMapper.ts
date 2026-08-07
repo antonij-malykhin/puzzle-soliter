@@ -15,6 +15,15 @@ export interface WorldCoordinate {
 
 export class BoardCoordinateMapper {
     public constructor(private config: BoardCoordinateMapperConfig) {}
+
+    public static createDefault(): BoardCoordinateMapper {
+        return new BoardCoordinateMapper({
+            boardCenterWorldX: 0,
+            boardCenterWorldY: 0,
+            cellSize: { x: 1, y: 1 },
+            gridDimentionSize: { x: 1, y: 1 },
+        });
+    }
     
     public updateProjection(projection: BoardProjectionConfig) {
         this.config = {
