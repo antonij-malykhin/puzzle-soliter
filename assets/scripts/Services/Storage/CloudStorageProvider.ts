@@ -16,6 +16,10 @@ export class CloudStorageProvider implements IStorageProvider {
         this.fallback = fallback;
     }
 
+    public async clear(): Promise<void> {
+        await this.fallback.clear();
+    }
+
     public async getItem<TValue>(key: string): Promise<TValue | null> {
         const cloudValue = await this.readCloud(key);
         if (cloudValue !== null && cloudValue !== undefined) {

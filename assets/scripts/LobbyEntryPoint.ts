@@ -45,10 +45,19 @@ export class LobbyEntryPoint extends Component {
     protected async onLoad(): Promise<void> {
         log('LobbyEntryPoint: Starting lobby initialization...');
 
+        
         this.onPlayButtonClicked = this.loadGameplayScene;
         this.requestServices();
         await this.initialize();
         const regionImage = await this.imageService.getImage(this.catalogData!.regionImageId);
+        
+        if (this.debugCompleteRegionButton) {
+            this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
+                await this.progressionManager.markRegionCompleted();
+                this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+                await this.lobbyUI.show();
+            }, this);
+        }
 
         if (this.progressionManager.isCurrentRegionCompleted()) {
             this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
@@ -66,13 +75,6 @@ export class LobbyEntryPoint extends Component {
         log('LobbyEntryPoint: Lobby initialized.');
         this.lobbyController.startLobby();
         this.yandexAdManager.showInterstitialIfAllowed();
-
-        if (this.debugCompleteRegionButton) {
-            this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
-                this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
-                await this.lobbyUI.show();
-            }, this);
-        }
     }
 
     private async initialize() {

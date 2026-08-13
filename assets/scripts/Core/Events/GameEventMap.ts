@@ -19,7 +19,7 @@ export interface GameEventMap {
         pieceIds: string[];
     };
     PieceRotated: { pieceId: string; rotation: number };
-    PuzzleCompleted: { levelId: string; elapsedSeconds: number };
+    PuzzleCompleted: { levelId: string; levelNumber: number };
     SettingsChanged: { settings: GameSettings };
     SuggestionProvided: { newCount : number };
     SuggestionResult: { firstPieceId: string; secondPieceId: string };

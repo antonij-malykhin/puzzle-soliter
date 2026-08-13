@@ -1,18 +1,28 @@
 import { IStorageProvider } from '../../Data/Interfaces/IStorageProvider';
 
 export class LocalStorageProvider implements IStorageProvider {
-    private readonly memoryFallback = new Map<string, string>();
 
+    private readonly memoryFallback = new Map<string, string>();
+    
     public async getItem<TValue>(key: string): Promise<TValue | null> {
-        //window.localStorage.clear();
         const rawValue = this.readRaw(key);
         if (!rawValue) {
             return null;
         }
-
+        
         return JSON.parse(rawValue) as TValue;
     }
 
+    public async clear(): Promise<void> {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.clear();
+            return;
+        }
+
+        this.memoryFallback.clear();
+        return;
+    }
+    
     public async setItem<TValue>(key: string, value: TValue): Promise<void> {
         const rawValue = JSON.stringify(value);
         this.writeRaw(key, rawValue);

@@ -1,24 +1,18 @@
-import { _decorator, Button, Component, instantiate, Node, Prefab } from 'cc';
+import { __private, _decorator, Button, Component, instantiate, Label, Node, Prefab } from 'cc';
 import type { YandexGames } from 'ysdk';
 import { YandexConfig } from '../../Core/Config/YandexConfig';
 import { ServiceContainer } from '../../Core/ServiceContainer';
 import { YandexService } from '../../Services/YandexService';
 import { LeaderboardRowUI } from './LeaderboardRowUI';
+import { LocalizationManager } from '../../Managers/LocalizationManager';
 
 const { ccclass, property } = _decorator;
 
-/**
- * Отображает лидерборд. Строки инстансируются из префаба строки, разделитель —
- * из префаба разделителя, а контейнер и кнопки подключаются через инспектор.
- * Код не создаёт элементы UI вручную.
- *
- * Структура списка:
- *   1) три строки призёров,
- *   2) разделительная полоса,
- *   3) три игрока выше, сам игрок и три игрока ниже.
- */
 @ccclass('LeaderboardUI')
 export class LeaderboardUI extends Component {
+    @property(Node)
+    private rootNode: Node | null = null;
+
     @property(Prefab)
     private rowPrefab: Prefab | null = null;
 
@@ -29,23 +23,53 @@ export class LeaderboardUI extends Component {
     private listRoot: Node | null = null;
 
     @property(Button)
-    private refreshButton: Button | null = null;
-
-    @property(Button)
     private closeButton: Button | null = null;
 
+    @property(Button)
+    private openButton: Button | null = null;
+
+    @property(Label)
+    private titleLabel: Label | null = null;
+
     protected onLoad(): void {
-        this.refreshButton?.node.on(Button.EventType.CLICK, this.refresh, this);
-        this.closeButton?.node.on(Button.EventType.CLICK, this.hidePanel, this);
+        this.requireCloseButton().node.on(Button.EventType.CLICK, this.hidePanel, this);
+        this.requireOpenButton().node.on(Button.EventType.CLICK, this.showPanel, this);
+    }
+    
+    private showPanel(): void {
+        this.requireRootNode().active = true;
+    }
+    
+    private requireOpenButton(): Button {
+        if (!this.openButton) {
+            throw new Error('Open button is not assigned.');
+        }
+        return this.openButton;
     }
 
     protected onEnable(): void {
+        this.requireTitleLabel().string = ServiceContainer.get(LocalizationManager).t('leaderboardTitle');
         void this.refresh();
     }
 
+    private requireTitleLabel(): Label {
+        if (!this.titleLabel) {
+            throw new Error('Title label is not assigned.');
+        }
+        return this.titleLabel;
+    }
+
     protected onDestroy(): void {
-        this.refreshButton?.node.off(Button.EventType.CLICK, this.refresh, this);
-        this.closeButton?.node.off(Button.EventType.CLICK, this.hidePanel, this);
+        if (this.closeButton?.node) {
+            this.closeButton.node.off(Button.EventType.CLICK, this.hidePanel, this);
+        }
+    }
+
+    private requireCloseButton(): Button {
+        if (!this.closeButton) {
+            throw new Error('Close button is not assigned.');
+        }
+        return this.closeButton;
     }
 
     public async refresh(): Promise<void> {
@@ -53,7 +77,7 @@ export class LeaderboardUI extends Component {
             return;
         }
 
-        const result = await ServiceContainer.get(YandexService).getLeaderboard(YandexConfig.leaderboards.bestTime);
+        const result = await ServiceContainer.get(YandexService).getLeaderboard(YandexConfig.leaderboards.leaderboard);
         const entriesByRank = this.indexByRank(result.entries);
 
         const displayRanks = this.buildDisplayRanks(result.userRank);
@@ -90,7 +114,7 @@ export class LeaderboardUI extends Component {
         }
 
         for (let rank = userRank - 3; rank <= userRank + 3; rank += 1) {
-            if (rank >= 1 && !ranks.includes(rank)) {
+            if (rank >= 1 && !ranks.find(r => r === rank)) {
                 ranks.push(rank);
             }
         }
@@ -108,7 +132,7 @@ export class LeaderboardUI extends Component {
 
         const row = rowNode.getComponent(LeaderboardRowUI);
         if (entry) {
-            row?.setData(entry.rank, entry.player.publicName, this.formatTime(entry.score));
+            row?.setData(entry.rank, entry.player.publicName, entry.score.toString());
         } else {
             row?.setData(rank, '—', '—');
         }
@@ -124,14 +148,14 @@ export class LeaderboardUI extends Component {
         dividerNode.setParent(this.listRoot);
     }
 
-    private formatTime(totalSeconds: number): string {
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = Math.round(totalSeconds % 60);
-        const secondsText = seconds < 10 ? `0${seconds}` : `${seconds}`;
-        return `${minutes}:${secondsText}`;
+    private hidePanel(): void {
+        this.requireRootNode().active = false;
     }
 
-    private hidePanel(): void {
-        this.node.active = false;
+    private requireRootNode(): Node {
+        if (!this.rootNode) {
+            throw new Error('Root node is not assigned.');
+        }
+        return this.rootNode;
     }
 }

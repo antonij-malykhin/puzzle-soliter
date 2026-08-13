@@ -30,15 +30,21 @@ import { RectSwapGenerationStrategy } from '../Generation/RectSwapGenerationStra
 import { BacktrackingGenerationStrategy } from '../Generation/BacktrackingGenerationStrategy';
 import { PieceFactory } from '../Generation/PieceFactory';
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 @ccclass('AppBootstrap')
 export class AppBootstrap extends Component {
+
+    @property
+    private clearLocalStorage: boolean = false;
 
     public async onLoad(): Promise<void> {
         director.addPersistRootNode(this.node);
         this.registryServices();
         await this.initializeServices();
+        if (this.clearLocalStorage) {
+            await ServiceContainer.get(SaveManager).clear();
+        }
         await ServiceContainer.get(SceneManager).loadLobbyScene();
         ServiceContainer.get(YandexService).signalReady();
     }

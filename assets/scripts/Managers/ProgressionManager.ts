@@ -104,6 +104,16 @@ export class ProgressionManager {
         return this.requireProgress().completedLevelIds.indexOf(levelId) >= 0;
     }
 
+    public async markRegionCompleted(): Promise<void> {
+        const progress = this.requireProgress();
+        for (const levelId of this.orderedLevelIds) {
+            if (progress.completedLevelIds.indexOf(levelId) < 0) {
+                await this.markLevelCompleted(levelId, 0);
+            }
+        }
+        await this.save();
+    }
+
     public async markLevelCompleted(levelId: string, elapsedSeconds: number): Promise<void> {
         const progress = this.requireProgress();
         const isFirstCompletion = progress.completedLevelIds.indexOf(levelId) < 0;

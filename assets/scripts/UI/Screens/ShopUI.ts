@@ -47,12 +47,20 @@ export class ShopUI extends Component {
     }
 
     protected onDestroy(): void {
-        this.openButton?.node.off(Button.EventType.CLICK, this.openPanel, this);
-        this.closeButton?.node.off(Button.EventType.CLICK, this.closePanel, this);
-        this.removeAdsButton?.node.off(Button.EventType.CLICK, this.onRemoveAdsClicked, this);
+        if (this.openButton?.node) {
+            this.openButton?.node.off(Button.EventType.CLICK, this.openPanel, this);
+        }
+        if (this.closeButton?.node) {
+            this.closeButton?.node.off(Button.EventType.CLICK, this.closePanel, this);
+        }
+        if (this.removeAdsButton?.node) {
+            this.removeAdsButton?.node.off(Button.EventType.CLICK, this.onRemoveAdsClicked, this);
+        }
 
         this.coinPackButtons.forEach((button, index) => {
-            button.node.off(Button.EventType.CLICK, () => this.onCoinPackClicked(index), this);
+            if (button?.node) {
+                button.node.off(Button.EventType.CLICK, () => this.onCoinPackClicked(index), this);
+            }
         });
     }
 

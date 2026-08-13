@@ -39,11 +39,11 @@ export class GameManager {
         this.transitionTo(GameState.Playing);
     }
 
-    public completeLevel(levelId: string, elapsedSeconds: number): void {
+    public completeLevel(levelId: string, levelNumber: number): void {
         this.transitionTo(GameState.Completed);
         this.eventBus.emit('PuzzleCompleted', {
             levelId,
-            elapsedSeconds,
+            levelNumber: levelNumber,
         });
     }
 

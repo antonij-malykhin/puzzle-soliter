@@ -20,7 +20,7 @@ export const YandexConfig = {
 
     /** Паки покупки валюты. */
     coinPacks: [
-        { productId: 'coin_pack_small', coins: 500 },
+        { productId: 'small_coint_pack', coins: 5 },
         { productId: 'coin_pack_medium', coins: 1500 },
         { productId: 'coin_pack_large', coins: 5000 },
     ] as ReadonlyArray<YandexCoinPackConfig>,
@@ -28,5 +28,6 @@ export const YandexConfig = {
     /** Идентификаторы лидербордов. */
     leaderboards: {
         bestTime: 'leaderboard_best_time',
+        leaderboard: 'leaderboard'
     },
 } as const;

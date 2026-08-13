@@ -31,6 +31,7 @@ export class PuzzleManager {
     private suggestionFinder: SuggestionFinder | null = null;
     private victoryChecker: VictoryChecker | null = null;
     private disposables: Array<() => void> = [];
+    private levelNumber: number = 1;
 
     public constructor(
         private readonly eventBus: EventBus<GameEventMap>,
@@ -42,6 +43,7 @@ export class PuzzleManager {
     public initializeLevel(levelData: LevelData): void {
         this.levelData = levelData;
         this.levelId = levelData.id;
+        this.levelNumber = levelData.levelNumber
         this.levelStartedAtMs = Date.now();
 
         this.disposables.forEach((dispose) => dispose());
@@ -112,8 +114,7 @@ export class PuzzleManager {
         this.applyPlacementResult(result);
 
         if (result.movedPieces.length > 0 && this.victoryChecker.isSolved()) {
-            const elapsedSeconds = Math.max(0, Math.floor((Date.now() - this.levelStartedAtMs) / 1000));
-            this.gameManager.completeLevel(this.levelId, elapsedSeconds);
+            this.gameManager.completeLevel(this.levelId, this.levelNumber);
         }
 
         return true;

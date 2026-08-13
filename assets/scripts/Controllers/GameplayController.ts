@@ -54,11 +54,11 @@ export class GameplayController {
                 await this.suggestionManager!.provideSuggestion();
             }
         });
-        this.completionSubscription = this.eventBus!.on('PuzzleCompleted', async ({ levelId, elapsedSeconds }) => {
+        this.completionSubscription = this.eventBus!.on('PuzzleCompleted', async ({ levelId, levelNumber: levelNumber }) => {
             this.pendingProgressSave = this.progressionManager!
-                .markLevelCompleted(levelId, elapsedSeconds)
+                .markLevelCompleted(levelId, levelNumber)
                 .then(() => ServiceContainer.get(YandexService)
-                    .setLeaderboardScore(YandexConfig.leaderboards.bestTime, elapsedSeconds));
+                    .setLeaderboardScore(YandexConfig.leaderboards.leaderboard, levelNumber));
         });
     }
 

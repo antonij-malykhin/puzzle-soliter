@@ -5,6 +5,10 @@ import { createDefaultGameSettings, GameSettings } from '../Data/Models/GameSett
 
 export class SaveManager {
     public constructor(private readonly storageProvider: IStorageProvider) {}
+    
+    public async clear(): Promise<void> {
+        await this.storageProvider.clear();
+    }
 
     public async loadSettings(): Promise<GameSettings> {
         const stored = await this.storageProvider.getItem<Partial<GameSettings>>(SAVE_SETTINGS_KEY);

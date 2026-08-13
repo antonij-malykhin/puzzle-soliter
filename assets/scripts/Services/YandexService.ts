@@ -14,15 +14,24 @@ export class YandexService {
     private sdk: YandexGames.SDK | null = null;
 
     public async initialize(): Promise<void> {
-        if (this.sdk !== null || typeof YaGames === 'undefined') {
-            console.warn('[YandexService] Unable to initialize Yandex SDK. YaGames is not available.');
+        // 1. Проверяем, не инициализирован ли SDK повторно
+        if (this.sdk !== null) {
+            console.log('[YandexService] SDK is already initialized.');
             return;
         }
 
+        // 2. Проверяем доступность скрипта YaGames
+        if (typeof YaGames === 'undefined') {
+            console.warn('[YandexService] YaGames script is not loaded or blocked.');
+            return;
+        }
+
+        // 3. Безопасный вызов инициализации
         try {
             this.sdk = await YaGames.init();
+            console.log('[YandexService] Yandex SDK successfully initialized!', this.sdk);
         } catch (error) {
-            console.warn('[YandexService] Unable to initialize Yandex SDK.', error);
+            console.warn('[YandexService] Failed to initialize Yandex SDK:', error);
             this.sdk = null;
         }
     }

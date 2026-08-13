@@ -6,11 +6,17 @@ export class LocalizationManager {
             lobbyLevel: 'Level {number}',
             lobbyLevelNotSelected: 'Level: not selected',
             gameLevel: 'Level: {id}',
+            collectionRegionLabel: 'Bonus',
+            collectionScreenTitle: 'Collection',
+            leaderboardTitle: 'Leaderboard',
         },
         ru: {
             lobbyLevel: 'Уровень {number}',
             lobbyLevelNotSelected: 'Уровень: не выбран',
             gameLevel: 'Уровень: {id}',
+            collectionRegionLabel: 'Бонус',
+            collectionScreenTitle: 'Коллекция',
+            leaderboardTitle: 'Таблица лидеров',
         },
     };
 

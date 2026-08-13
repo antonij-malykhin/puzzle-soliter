@@ -39,7 +39,7 @@ export class GameplayUI extends Component {
             this.gameUI.show();
         }));
 
-        this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, elapsedSeconds }) => {
+        this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, levelNumber: elapsedSeconds }) => {
             await this.victoryUI.show();
         }));
     }

@@ -2,6 +2,7 @@ import { PuzzleGameplayMode } from './PuzzleGameplayMode';
 
 export interface LevelData {
     id: string;
+    levelNumber: number;
     gridColumnCount: number;
     gridRowCount: number;
     gridCellWidth: number;
