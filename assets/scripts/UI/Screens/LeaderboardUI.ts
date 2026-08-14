@@ -1,12 +1,16 @@
-import { __private, _decorator, Button, Component, instantiate, Label, Node, Prefab } from 'cc';
+import { __private, _decorator, Button, Component, instantiate, Label, Node, Prefab, SpriteFrame } from 'cc';
 import type { YandexGames } from 'ysdk';
 import { YandexConfig } from '../../Core/Config/YandexConfig';
 import { ServiceContainer } from '../../Core/ServiceContainer';
-import { YandexService } from '../../Services/YandexService';
+import { LeaderboardResult, YandexService } from '../../Services/YandexService';
 import { LeaderboardRowUI } from './LeaderboardRowUI';
 import { LocalizationManager } from '../../Managers/LocalizationManager';
+import { ImageService } from '../../Services/ImageService';
+import { LoadingService } from '../../Services/LoadingService';
 
 const { ccclass, property } = _decorator;
+
+const MOCK_AVATAR_URL = "C:\\Users\\Antonij\\Projects\\PuzzleMozaic\\assets\\sprites\\settings-button.png";
 
 @ccclass('LeaderboardUI')
 export class LeaderboardUI extends Component {
@@ -31,13 +35,20 @@ export class LeaderboardUI extends Component {
     @property(Label)
     private titleLabel: Label | null = null;
 
+    @property(SpriteFrame)
+    private defaultAvatarSpriteFrame: SpriteFrame | null = null;
+
     protected onLoad(): void {
         this.requireCloseButton().node.on(Button.EventType.CLICK, this.hidePanel, this);
         this.requireOpenButton().node.on(Button.EventType.CLICK, this.showPanel, this);
     }
     
-    private showPanel(): void {
+    private async showPanel(): Promise<void> {
+        ServiceContainer.get(LoadingService).setMessage(ServiceContainer.get(LocalizationManager).t('loadingLeaderboard'));
+        ServiceContainer.get(LoadingService).show();
+        await this.refresh();
         this.requireRootNode().active = true;
+        ServiceContainer.get(LoadingService).hide();
     }
     
     private requireOpenButton(): Button {
@@ -49,7 +60,6 @@ export class LeaderboardUI extends Component {
 
     protected onEnable(): void {
         this.requireTitleLabel().string = ServiceContainer.get(LocalizationManager).t('leaderboardTitle');
-        void this.refresh();
     }
 
     private requireTitleLabel(): Label {
@@ -77,52 +87,115 @@ export class LeaderboardUI extends Component {
             return;
         }
 
-        const result = await ServiceContainer.get(YandexService).getLeaderboard(YandexConfig.leaderboards.leaderboard);
-        const entriesByRank = this.indexByRank(result.entries);
-
-        const displayRanks = this.buildDisplayRanks(result.userRank);
+        //const result = await ServiceContainer.get(YandexService).getLeaderboard(YandexConfig.leaderboards.leaderboard);
+        const result = this.getMockLeaderboard();
         this.listRoot.removeAllChildren();
+        //const spriteFrames = await this.getSpriteFramesFromEntries(result.entries);
+        const spriteFrames: SpriteFrame[] = result.entries.map(() => this.defaultAvatarSpriteFrame!);
 
-        for (let index = 0; index < displayRanks.length; index += 1) {
-            const rank = displayRanks[index];
-            this.mountRow(rank, entriesByRank.get(rank), rank === result.userRank);
+        for (let index = 0; index < result.entries.length; index += 1) {
+            const entity = result.entries[index];
+            this.mountRow(entity.rank, entity, entity.rank === result.userRank, spriteFrames[index]);
 
-            if (index === 2 && result.userRank !== null && index < displayRanks.length - 1) {
+            if (index === 2 && result.userRank !== null && index < result.entries.length - 1) {
                 this.mountDivider();
             }
         }
     }
 
-    private indexByRank(entries: ReadonlyArray<YandexGames.LeaderboardEntry>): Map<number, YandexGames.LeaderboardEntry> {
-        const byRank = new Map<number, YandexGames.LeaderboardEntry>();
-        for (const entry of entries) {
-            if (!byRank.has(entry.rank)) {
-                byRank.set(entry.rank, entry);
-            }
-        }
-        return byRank;
+    private async getSpriteFramesFromEntries(entries: readonly YandexGames.LeaderboardEntry[]): Promise<SpriteFrame[]> {
+        return await Promise.all(entries.map(async entry => await ServiceContainer.get(ImageService).getImageByUrl(entry.player.getAvatarSrc('small'))));
     }
 
-    private buildDisplayRanks(userRank: number | null): number[] {
-        const ranks: number[] = [];
-        for (let rank = 1; rank <= 3; rank += 1) {
-            ranks.push(rank);
+    private getMockLeaderboard(): LeaderboardResult {
+        return {
+            entries: [
+                {
+                    score: 100,
+                    rank: 1,
+                    player: {
+                        getAvatarSrc(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        getAvatarSrcSet(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        lang: "ru",
+                        publicName: "Антоний",
+                        scopePermissions: {
+                            avatar: "",
+                            public_name: "",
+                        },
+                        uniqueID: "Антоний",
+                    },
+                    formattedScore: "100",
+                },
+                {
+                    score: 10,
+                    rank: 2,
+                    player: {
+                        getAvatarSrc(size: "small" | "medium" | "large"):string { return MOCK_AVATAR_URL; },
+                        getAvatarSrcSet(size: "small" | "medium" | "large"): string {return MOCK_AVATAR_URL;},
+                        lang: "ru",
+                        publicName: "Player1",
+                        scopePermissions: {
+                            avatar: "",
+                            public_name: "",
+                        },
+                        uniqueID: "Player1",
+                    },
+                    formattedScore: "10",
+                },
+                {
+                    score: 9,
+                    rank: 3,
+                    player: {
+                        getAvatarSrc(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        getAvatarSrcSet(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        lang: "ru",
+                        publicName: "Player2",
+                        scopePermissions: {
+                            avatar: "",
+                            public_name: "",
+                        },
+                        uniqueID: "Player2",
+                    },
+                    formattedScore: "9",
+                },
+                {
+                    score: 8,
+                    rank: 4,
+                    player: {
+                        getAvatarSrc(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        getAvatarSrcSet(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        lang: "ru",
+                        publicName: "Player3",
+                        scopePermissions: {
+                            avatar: "",
+                            public_name: "",
+                        },
+                        uniqueID: "Player3",
+                    },
+                    formattedScore: "8",
+                },
+                {
+                    score: 5,
+                    rank: 200000,
+                    player: {
+                        getAvatarSrc(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        getAvatarSrcSet(size: "small" | "medium" | "large"): string { return MOCK_AVATAR_URL; },
+                        lang: "ru",
+                        publicName: "Player4",
+                        scopePermissions: {
+                            avatar: "",
+                            public_name: "",
+                        },
+                        uniqueID: "Player4",
+                    },
+                    formattedScore: "5",
+                }
+            ],
+            userRank: 1
         }
-
-        if (userRank === null) {
-            return ranks;
-        }
-
-        for (let rank = userRank - 3; rank <= userRank + 3; rank += 1) {
-            if (rank >= 1 && !ranks.find(r => r === rank)) {
-                ranks.push(rank);
-            }
-        }
-
-        return ranks;
     }
 
-    private mountRow(rank: number, entry: YandexGames.LeaderboardEntry | undefined, isPlayer: boolean): void {
+    private mountRow(rank: number, entry: YandexGames.LeaderboardEntry | undefined, isPlayer: boolean, avatarImage: SpriteFrame): void {
         if (!this.rowPrefab || !this.listRoot) {
             return;
         }
@@ -132,9 +205,9 @@ export class LeaderboardUI extends Component {
 
         const row = rowNode.getComponent(LeaderboardRowUI);
         if (entry) {
-            row?.setData(entry.rank, entry.player.publicName, entry.score.toString());
+            row?.setData(entry.rank, entry.player.publicName, entry.score.toString(), avatarImage);
         } else {
-            row?.setData(rank, '—', '—');
+            row?.setData(rank, '—', '—', avatarImage);
         }
         row?.setHighlighted(isPlayer);
     }

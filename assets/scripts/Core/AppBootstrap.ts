@@ -29,6 +29,9 @@ import { PuzzleGenerator } from '../Generation/PuzzleGenerator';
 import { RectSwapGenerationStrategy } from '../Generation/RectSwapGenerationStrategy';
 import { BacktrackingGenerationStrategy } from '../Generation/BacktrackingGenerationStrategy';
 import { PieceFactory } from '../Generation/PieceFactory';
+import { LoadingHUD } from '../UI/HUD/LoadingHUD';
+import { LoadingService } from '../Services/LoadingService';
+import { HttpImageDownloader } from '../Services/Content/HttpImageDownloader';
 
 const { ccclass, property } = _decorator;
 
@@ -38,9 +41,14 @@ export class AppBootstrap extends Component {
     @property
     private clearLocalStorage: boolean = false;
 
+    @property(LoadingHUD)
+    private loadingHud: LoadingHUD | null = null;
+
     public async onLoad(): Promise<void> {
         director.addPersistRootNode(this.node);
+        director.addPersistRootNode(this.loadingHud!.node);
         this.registryServices();
+        this.registerLoadingHud();
         await this.initializeServices();
         if (this.clearLocalStorage) {
             await ServiceContainer.get(SaveManager).clear();
@@ -56,6 +64,16 @@ export class AppBootstrap extends Component {
         await ServiceContainer.get(IapManager).initialize();
     }
 
+    private registerLoadingHud() {
+        if (!this.loadingHud) {
+            return;
+        }
+
+        const loadingService = ServiceContainer.get(LoadingService);
+        loadingService.register(this.loadingHud);
+        loadingService.show(ServiceContainer.get(LocalizationManager).t('loading'));
+    }
+
     private registryServices() {
         const spriteFrameSliceService = new SpriteFrameSliceService();
         const eventBus = new EventBus<GameEventMap>();
@@ -69,7 +87,7 @@ export class AppBootstrap extends Component {
         const levelService = new LevelService(new ResourcesLevelProvider());
         const walletManager = new WalletManager(eventBus);
         const progressionManager = new ProgressionManager(saveManager, levelService, walletManager);
-        const imageService = new ImageService(new ResourcesImageLoader());
+        const imageService = new ImageService(new ResourcesImageLoader(), new HttpImageDownloader());
         const suggestionManager = new SuggestionManager(progressionManager, eventBus);
         const yandexAdManager = new YandexAdManager(yandexService, settingsManager, progressionManager);
         const iapManager = new IapManager(yandexService, progressionManager, settingsManager);
@@ -90,6 +108,7 @@ export class AppBootstrap extends Component {
         );
         
         ServiceContainer.register(InputManager, inputManager);
+        ServiceContainer.register(LoadingService, new LoadingService());
         ServiceContainer.register(EventBus, eventBus);
         ServiceContainer.register(SaveManager, saveManager);
         ServiceContainer.register(SettingsManager, settingsManager);

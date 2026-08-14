@@ -1,14 +1,17 @@
-import { _decorator, Color, Component, Label, Sprite, SpriteFrame } from 'cc';
+import { _decorator, Color, Component, Label, Sprite, SpriteFrame, Node, Layout } from 'cc';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('LeaderboardRowUI')
 export class LeaderboardRowUI extends Component {
     @property(Label)
-    private rankLabel: Label | null = null;
+    private rankLabel!: Label;
 
     @property(Sprite)
     private rankSprite: Sprite | null = null;
+
+    @property(Sprite)
+    private avatarSprite: Sprite | null = null;
 
     @property(SpriteFrame)
     private rankFirstSpriteFrame: SpriteFrame | null = null;
@@ -19,6 +22,15 @@ export class LeaderboardRowUI extends Component {
     @property(SpriteFrame)
     private rankThirdSpriteFrame: SpriteFrame | null = null;
 
+    @property(SpriteFrame)
+    private borderPlayerSpriteFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    private borderDefaultSpriteFrame: SpriteFrame | null = null;
+
+    @property(Sprite)
+    private borderSprite: Sprite | null = null;
+
     @property(Label)
     private nameLabel: Label | null = null;
 
@@ -28,10 +40,7 @@ export class LeaderboardRowUI extends Component {
     @property(Sprite)
     private backgroundSprite: Sprite | null = null;
 
-    @property(Color)
-    private highlightColor: Color = new Color(255, 220, 90, 120);
-
-    public setData(rank: number, name: string, score: string): void {
+    public setData(rank: number, name: string, score: string, avatarImage: SpriteFrame): void {
         if (this.rankSprite) {
             switch (rank) {
                 case 1:
@@ -47,11 +56,14 @@ export class LeaderboardRowUI extends Component {
                     this.rankSprite.spriteFrame = this.rankThirdSpriteFrame;
                     break;
                 default:
+                    this.rankLabel!.node.active = true;
                     this.rankSprite.node.active = false;
                     this.rankSprite.spriteFrame = null;
                     break;
             }
         }
+
+        this.avatarSprite!.spriteFrame = avatarImage;
 
         if (this.rankLabel) {
             this.rankLabel.string = `${rank}`;
@@ -71,9 +83,10 @@ export class LeaderboardRowUI extends Component {
             return;
         }
 
-        this.backgroundSprite.node.active = highlighted;
         if (highlighted) {
-            this.backgroundSprite.color = this.highlightColor;
+            this.borderSprite!.spriteFrame = this.borderPlayerSpriteFrame;
+        } else {
+            this.borderSprite!.spriteFrame = this.borderDefaultSpriteFrame;
         }
     }
 }

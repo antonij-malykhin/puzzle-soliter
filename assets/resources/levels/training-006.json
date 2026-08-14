@@ -1,5 +1,6 @@
-﻿{
+{
     "id":  "training-006",
+    "levelNumber":  6,
     "gridColumnCount":  3,
     "gridRowCount":  3,
     "gridCellWidth":  300,

@@ -22,6 +22,7 @@ import { LevelService } from '../../Services/LevelService';
 import { ImageService } from '../../Services/ImageService';
 import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
 import { LocalizationManager } from '../../Managers/LocalizationManager';
+import { LoadingService } from '../../Services/LoadingService';
 
 const { ccclass, property } = _decorator;
 
@@ -101,13 +102,19 @@ export class CollectionUI extends Component {
 		}
 
 		this.isOpening = true;
+		const loadingService = ServiceContainer.get(LoadingService);
+		const localization = ServiceContainer.get(LocalizationManager);
+		loadingService.setMessage(localization.t('loadingCollection'));
+		loadingService.show();
+
 		try {
 			await this.populate();
-			this.requireTitleLabel().string = ServiceContainer.get(LocalizationManager).t('collectionScreenTitle');
+			this.requireTitleLabel().string = localization.t('collectionScreenTitle');
 			this.showCollections();
 			this.requireScrollView().scrollToTop(0);
 		} finally {
 			this.isOpening = false;
+			loadingService.hide();
 		}
 	}
 
@@ -148,13 +155,13 @@ export class CollectionUI extends Component {
 
 		const regionNumber = progressionManager.getCurrentRegionNumber();
 		const catalog = await levelService.getLevelCatalog(regionNumber);
-		const regionImage = await imageService.getImage(catalog.regionImageId);
+		const regionImage = await imageService.getImageById(catalog.regionImageId);
 
 		const blueprints: CollectionCellBlueprint[] = [];
 
 		for (const level of catalog.levels) {
 			const levelData = await levelService.getLevel(level.levelId);
-			const spriteFrame = levelData.imageId ? await imageService.getImage(levelData.imageId) : null;
+			const spriteFrame = levelData.imageId ? await imageService.getImageById(levelData.imageId) : null;
 
 			blueprints.push({
 				prefab: this.requireCommonLevelImagePrefab(),

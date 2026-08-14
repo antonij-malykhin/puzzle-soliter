@@ -142,8 +142,8 @@ export class YandexService {
             const leaderboards = await this.getSDK().getLeaderboards();
             const result = await leaderboards.getLeaderboardEntries(name, {
                 includeUser: true,
-                quantityAround: 8,
-                quantityTop: 5,
+                quantityAround: 3,
+                quantityTop: 3,
             });
             return { entries: result.entries, userRank: result.userRank ?? null };
         } catch (error) {

@@ -14,6 +14,8 @@ import { SceneManager } from './Managers/SceneManager';
 import { GAMEPLAY_SCENE_NAME } from './Core/Config/GameConstants';
 import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
 import { YandexAdManager } from './Managers/YandexAdManager';
+import { LoadingService } from './Services/LoadingService';
+import { LocalizationManager } from './Managers/LocalizationManager';
 
 const { ccclass, property } = _decorator;
 
@@ -45,35 +47,41 @@ export class LobbyEntryPoint extends Component {
     protected async onLoad(): Promise<void> {
         log('LobbyEntryPoint: Starting lobby initialization...');
 
-        
         this.onPlayButtonClicked = this.loadGameplayScene;
         this.requestServices();
-        await this.initialize();
-        const regionImage = await this.imageService.getImage(this.catalogData!.regionImageId);
-        
-        if (this.debugCompleteRegionButton) {
-            this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
-                await this.progressionManager.markRegionCompleted();
+        this.setLoadingMessage();
+
+        try {
+            await this.initialize();
+            const regionImage = await this.imageService.getImageById(this.catalogData!.regionImageId);
+            
+            if (this.debugCompleteRegionButton) {
+                this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
+                    await this.progressionManager.markRegionCompleted();
+                    this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+                    await this.lobbyUI.show();
+                }, this);
+            }
+
+            if (this.progressionManager.isCurrentRegionCompleted()) {
                 this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
                 await this.lobbyUI.show();
-            }, this);
+                log('LobbyEntryPoint: Region complete screen shown.');
+                return;
+            }
+
+            const lobbyCards = await this.getLobbyCards(regionImage);
+            await this.lobbyController.initialize(this.eventBus, this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
+                onPlayRequested: this.onPlayButtonClicked.bind(this),
+                lobbyCards: lobbyCards,
+            });
+            
+            log('LobbyEntryPoint: Lobby initialized.');
+            this.lobbyController.startLobby();
+        } finally {
+            this.hideLoadingHud();
         }
 
-        if (this.progressionManager.isCurrentRegionCompleted()) {
-            this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
-            await this.lobbyUI.show();
-            log('LobbyEntryPoint: Region complete screen shown.');
-            return;
-        }
-
-        const lobbyCards = await this.getLobbyCards(regionImage);
-        await this.lobbyController.initialize(this.eventBus, this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
-            onPlayRequested: this.onPlayButtonClicked.bind(this),
-            lobbyCards: lobbyCards,
-        });
-        
-        log('LobbyEntryPoint: Lobby initialized.');
-        this.lobbyController.startLobby();
         this.yandexAdManager.showInterstitialIfAllowed();
     }
 
@@ -98,6 +106,16 @@ export class LobbyEntryPoint extends Component {
         this.sceneService.loadGameplayScene(GAMEPLAY_SCENE_NAME);
     }
 
+    private setLoadingMessage() {
+        const loadingService = ServiceContainer.get(LoadingService);
+        const localization = ServiceContainer.get(LocalizationManager);
+        loadingService.setMessage(localization.t('loadingLobby'));
+    }
+
+    private hideLoadingHud() {
+        ServiceContainer.get(LoadingService).hide();
+    }
+
     private async loadNextRegion(): Promise<void> {
         await this.progressionManager.advanceToNextRegion();
         this.sceneService.loadLobbyScene();
@@ -117,7 +135,7 @@ export class LobbyEntryPoint extends Component {
                 cellY: card.gridY - 1,
             });
 
-            const backSpriteFrame = await this.imageService.getImage(card.cardBackFrontImageId!);
+            const backSpriteFrame = await this.imageService.getImageById(card.cardBackFrontImageId!);
 
             return {
                 levelId: card.levelId,

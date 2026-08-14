@@ -20,7 +20,7 @@
         "progress": 1,
         "state": "success",
         "stage": "build",
-        "message": "13.08.2026 21:26:32 build success in 16 s!",
+        "message": "14.08.2026 11:24:34 build success in 16 s!",
         "detailMessage": "// ---- build task cocos-service：onAfterBuild ----\r",
         "options": {
           "name": "PuzzleMozaicDebug",
@@ -86,7 +86,7 @@
           "__version__": "1.3.9",
           "logDest": "project://temp/builder/log/web-desktop05.08.2026 20-01.log"
         },
-        "time": "13.08.2026 21:26:15",
+        "time": "14.08.2026 11:24:17",
         "dirty": false
       }
     }

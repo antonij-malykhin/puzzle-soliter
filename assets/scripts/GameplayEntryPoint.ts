@@ -16,6 +16,8 @@ import { SceneManager } from './Managers/SceneManager';
 import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
 import { GameplaySession } from './Controllers/GameplaySession';
 import { YandexAdManager } from './Managers/YandexAdManager';
+import { LoadingService } from './Services/LoadingService';
+import { LocalizationManager } from './Managers/LocalizationManager';
 
 const { ccclass, property } = _decorator;
 
@@ -33,28 +35,36 @@ export class GameplayEntryPoint extends Component {
     private session: GameplaySession | null = null;
 
     protected async start(): Promise<void> {
-        this.session = new GameplaySession(
-            {
-                eventBus: ServiceContainer.get<EventBus<GameEventMap>>(EventBus),
-                imageService: ServiceContainer.get(ImageService),
-                levelService: ServiceContainer.get(LevelService),
-                gameManager: ServiceContainer.get(GameManager),
-                puzzleManager: ServiceContainer.get(PuzzleManager),
-                inputManager: ServiceContainer.get(InputManager),
-                sceneManager: ServiceContainer.get(SceneManager),
-                progressionManager: ServiceContainer.get(ProgressionManager),
-                suggestionManager: ServiceContainer.get(SuggestionManager),
-                yandexAdManager: ServiceContainer.get(YandexAdManager),
-                spriteFrameSliceService: ServiceContainer.get(SpriteFrameSliceService),
-            },
-            {
-                puzzleStage: this.puzzleStage,
-                gameplayUI: this.gameplayUI,
-                boardUITransform: this.boardUITransform,
-            },
-        );
+        const loadingService = ServiceContainer.get(LoadingService);
+        const localization = ServiceContainer.get(LocalizationManager);
+        loadingService.setMessage(localization.t('loadingLevel'));
 
-        await this.session.start();
+        try {
+            this.session = new GameplaySession(
+                {
+                    eventBus: ServiceContainer.get<EventBus<GameEventMap>>(EventBus),
+                    imageService: ServiceContainer.get(ImageService),
+                    levelService: ServiceContainer.get(LevelService),
+                    gameManager: ServiceContainer.get(GameManager),
+                    puzzleManager: ServiceContainer.get(PuzzleManager),
+                    inputManager: ServiceContainer.get(InputManager),
+                    sceneManager: ServiceContainer.get(SceneManager),
+                    progressionManager: ServiceContainer.get(ProgressionManager),
+                    suggestionManager: ServiceContainer.get(SuggestionManager),
+                    yandexAdManager: ServiceContainer.get(YandexAdManager),
+                    spriteFrameSliceService: ServiceContainer.get(SpriteFrameSliceService),
+                },
+                {
+                    puzzleStage: this.puzzleStage,
+                    gameplayUI: this.gameplayUI,
+                    boardUITransform: this.boardUITransform,
+                },
+            );
+
+            await this.session.start();
+        } finally {
+            loadingService.hide();
+        }
     }
 
     protected onDestroy(): void {

@@ -3,6 +3,11 @@ export class LocalizationManager {
 
     private readonly strings: Record<string, Record<string, string>> = {
         en: {
+            loading: 'Loading...',
+            loadingLobby: 'Loading lobby...',
+            loadingLevel: 'Loading level...',
+            loadingCollection: 'Loading collection...',
+            loadingLeaderboard: 'Loading leaderboard...',
             lobbyLevel: 'Level {number}',
             lobbyLevelNotSelected: 'Level: not selected',
             gameLevel: 'Level: {id}',
@@ -11,6 +16,11 @@ export class LocalizationManager {
             leaderboardTitle: 'Leaderboard',
         },
         ru: {
+            loading: 'Загрузка...',
+            loadingLobby: 'Загрузка лобби...',
+            loadingLevel: 'Загрузка уровня...',
+            loadingCollection: 'Загрузка коллекции...',
+            loadingLeaderboard: 'Загрузка таблицы лидеров...',
             lobbyLevel: 'Уровень {number}',
             lobbyLevelNotSelected: 'Уровень: не выбран',
             gameLevel: 'Уровень: {id}',

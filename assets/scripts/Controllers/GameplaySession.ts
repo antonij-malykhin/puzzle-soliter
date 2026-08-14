@@ -67,7 +67,7 @@ export class GameplaySession {
             this.services.spriteFrameSliceService,
         );
 
-        await this.services.imageService.getImage(this.levelData.imageId).catch(() => {
+        await this.services.imageService.getImageById(this.levelData.imageId).catch(() => {
             // Placeholder content may be absent at early MVP stages.
         });
 

@@ -58,7 +58,7 @@ export class ImageBoardRenderer {
             this.imageNode.setPosition(new Vec3(boardOriginX, boardOriginY, -1));
 
             // Load and assign sprite frame
-            const spriteFrame = await this.imageService.getImage(imageId);
+            const spriteFrame = await this.imageService.getImageById(imageId);
             if (spriteFrame && this.spriteComponent) {
                 this.spriteComponent.spriteFrame = spriteFrame;
                 this.spriteComponent.type = Sprite.Type.SIMPLE; // Use simple rendering for performance

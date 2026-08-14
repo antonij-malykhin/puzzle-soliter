@@ -237,7 +237,7 @@ export class PuzzleStage extends Component {
         let sourceSpriteFrame: SpriteFrame | null = null;
         if (this.imageService) {
             try {
-                sourceSpriteFrame = await this.imageService.getImage(levelData.imageId);
+                sourceSpriteFrame = await this.imageService.getImageById(levelData.imageId);
             } catch (error) {
                 console.warn(`[PuzzleStage] Failed to load image for pieces: ${levelData.imageId}`, error);
             }
