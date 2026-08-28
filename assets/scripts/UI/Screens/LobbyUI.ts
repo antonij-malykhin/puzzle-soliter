@@ -79,9 +79,9 @@ export class LobbyUI extends UIView {
 
 		this.playHandler = onPlayRequested;
 
-		this.disposables.push(eventBus.on('SettingsChanged', ({ settings }) => {
-			this.settingsUI.setSettings(settings);
-		}));
+		// this.disposables.push(eventBus.on('SettingsChanged', ({ settings }) => {
+		// 	this.settingsUI.setSettings(settings);
+		// }));
 
 		this.walletUI.initialize(eventBus);
 		this.levelGridManager.initGrid(spacingX, spacingY, cols, rows);

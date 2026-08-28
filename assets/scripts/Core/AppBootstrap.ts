@@ -11,6 +11,7 @@ import { LevelService } from '../Services/LevelService';
 import { ResourcesLevelProvider } from '../Services/Content/ResourcesLevelProvider';
 import { ImageService } from '../Services/ImageService';
 import { ResourcesImageLoader } from '../Services/Content/ResourcesImageLoader';
+import { BundleImageLoader } from '../Services/Content/BundleImageLoader';
 import { PuzzleManager } from '../Managers/PuzzleManager';
 import { PuzzleValidator } from '../Validation/PuzzleValidator';
 import { InputManager } from '../Input/InputManager';
@@ -32,6 +33,7 @@ import { PieceFactory } from '../Generation/PieceFactory';
 import { LoadingHUD } from '../UI/HUD/LoadingHUD';
 import { LoadingService } from '../Services/LoadingService';
 import { HttpImageDownloader } from '../Services/Content/HttpImageDownloader';
+import { ResourcesAudioClipProvider } from '../Services/Content/ResourcesAudioClipProvider';
 
 const { ccclass, property } = _decorator;
 
@@ -59,8 +61,11 @@ export class AppBootstrap extends Component {
 
     private async initializeServices() {
         await ServiceContainer.get(YandexService).initialize();
-        await ServiceContainer.get(SettingsManager).initialize();
+        const settingsManager = ServiceContainer.get(SettingsManager);
+        await settingsManager.initialize();
+        ServiceContainer.get(AudioManager).initialize(settingsManager.getSettings());
         await ServiceContainer.get(ProgressionManager).initialize();
+        await ServiceContainer.get(SuggestionManager).initialize();
         await ServiceContainer.get(IapManager).initialize();
     }
 
@@ -80,16 +85,16 @@ export class AppBootstrap extends Component {
         const yandexService = new YandexService();
         const saveManager = new SaveManager(new CloudStorageProvider(yandexService));
         const settingsManager = new SettingsManager(saveManager, eventBus);
-        const audioManager = new AudioManager();
+        const audioManager = new AudioManager(eventBus, new ResourcesAudioClipProvider());
         const localizationManager = new LocalizationManager();
         const sceneManager = new SceneManager();
         const gameManager = new GameManager(eventBus);
         const levelService = new LevelService(new ResourcesLevelProvider());
         const walletManager = new WalletManager(eventBus);
         const progressionManager = new ProgressionManager(saveManager, levelService, walletManager);
-        const imageService = new ImageService(new ResourcesImageLoader(), new HttpImageDownloader());
+        const imageService = new ImageService(new ResourcesImageLoader(), new BundleImageLoader(), new HttpImageDownloader());
         const suggestionManager = new SuggestionManager(progressionManager, eventBus);
-        const yandexAdManager = new YandexAdManager(yandexService, settingsManager, progressionManager);
+        const yandexAdManager = new YandexAdManager(yandexService, settingsManager, progressionManager, audioManager);
         const iapManager = new IapManager(yandexService, progressionManager, settingsManager);
         const puzzleGenerator = new PuzzleGenerator(
             new RectSwapGenerationStrategy(),

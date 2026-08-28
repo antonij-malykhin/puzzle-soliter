@@ -13,7 +13,27 @@ export class SettingsManager {
 
     public async initialize(): Promise<void> {
         this.settings = await this.saveManager.loadSettings();
+        this.eventBus.on('MusicVolumeChanged', this.handleMusicVolumeChanged.bind(this));
+        this.eventBus.on('SFXVolumeChanged', this.handleSFXVolumeChanged.bind(this));
         this.eventBus.emit('SettingsChanged', { settings: this.settings });
+    }
+
+    private handleMusicVolumeChanged(payload: { volume: number }): void {
+        if (!this.settings) {
+            throw new Error('SettingsManager is not initialized.');
+        }
+
+        this.settings.musicVolume = payload.volume;
+        this.updateSettings(this.settings);
+    }
+
+    private handleSFXVolumeChanged(payload: { volume: number }): void {
+        if (!this.settings) {
+            throw new Error('SettingsManager is not initialized.');
+        }
+
+        this.settings.sfxVolume = payload.volume;
+        this.updateSettings(this.settings);
     }
 
     public getSettings(): GameSettings {

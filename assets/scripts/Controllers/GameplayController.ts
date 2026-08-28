@@ -24,6 +24,7 @@ export class GameplayController {
     private gameplayUI!: GameplayUI;
     private interstitialTimer: ReturnType<typeof setInterval> | null = null;
     private accumulatedPlaySeconds = 0;
+    private currentLevelNumber: number = 1;
 
     public async initialize(
         eventBus: EventBus<GameEventMap>,
@@ -33,17 +34,20 @@ export class GameplayController {
         progressionManager: ProgressionManager,
         suggestionManager: SuggestionManager,
         yandexAdManager: YandexAdManager,
-        activeLevelId: string
     ): Promise<void> {
         this.eventBus = eventBus;
         this.gameManager = gameManager;
         this.sceneManager = sceneManager;
-        this.currentLevelId = activeLevelId;
+        this.currentLevelId = progressionManager.getCurrentLevelId();
+        this.currentLevelNumber = progressionManager.getCurrentLevelNumber();
         this.gameplayUI = gameplayUI;
         this.progressionManager = progressionManager;
         this.suggestionManager = suggestionManager;
         this.yandexAdManager = yandexAdManager;
-        this.gameplayUI.initialize(eventBus, {
+        this.gameplayUI.initialize(
+            eventBus,
+            this.suggestionManager.getSuggestionCount(),
+            {
             onVictoryNextRequested: async () => {
                 await this.openLobbyScene();
             },
@@ -63,7 +67,7 @@ export class GameplayController {
     }
 
     public async startGameplay(): Promise<void> {
-        this.gameManager.startLevel(this.currentLevelId);
+        this.gameManager.startLevel(this.currentLevelNumber.toString());
         this.startInterstitialTimer();
     }
 

@@ -80,7 +80,6 @@ export class GameplaySession {
             this.services.progressionManager,
             this.services.suggestionManager,
             this.services.yandexAdManager,
-            this.services.progressionManager.getCurrentLevelId(),
         );
 
         this.services.eventBus.emit('LevelLoaded', {

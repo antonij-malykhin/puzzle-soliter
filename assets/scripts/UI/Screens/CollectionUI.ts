@@ -32,6 +32,7 @@ const COLLECTION_CELL_SPACING = 0;
 const COLLECTION_COLUMN_COUNT = 2;
 const FULL_IMAGE_MAX_WIDTH = 1040;
 const FULL_IMAGE_MAX_HEIGHT = 2300;
+const DEFAULT_MAX_REGION_NUMBER = 10;
 
 interface CollectionCellBlueprint {
 	readonly item: CollectionImagePresentation;
@@ -61,6 +62,18 @@ export class CollectionUI extends Component {
 	@property(Button)
 	public closeFullImageButton: Button | null = null;
 
+	@property(Button)
+	public previousRegionButton: Button | null = null;
+
+	@property(Button)
+	public nextRegionButton: Button | null = null;
+
+	@property(Boolean)
+	public showOnlyAvailableRegions = false;
+
+	@property(Number)
+	public maxRegionNumber = DEFAULT_MAX_REGION_NUMBER;
+
 	@property(Sprite)
 	public fullImageSprite: Sprite | null = null;
 
@@ -74,11 +87,14 @@ export class CollectionUI extends Component {
 	public titleLabel: Label | null = null;
 
 	private isOpening = false;
+	private selectedRegionNumber = 1;
 
 	protected onLoad(): void {
 		this.collectionButton?.node.on(Button.EventType.CLICK, this.open, this);
 		this.closeButton?.node.on(Button.EventType.CLICK, this.closeCollections, this);
 		this.closeFullImageButton?.node.on(Button.EventType.CLICK, this.closeFullImage, this);
+		this.previousRegionButton?.node.on(Button.EventType.CLICK, this.onPreviousRegionClicked, this);
+		this.nextRegionButton?.node.on(Button.EventType.CLICK, this.onNextRegionClicked, this);
 		this.closeCollections();
 	}
 
@@ -94,6 +110,14 @@ export class CollectionUI extends Component {
 		if (this.closeFullImageButton?.node) {
 			this.closeFullImageButton?.node.off(Button.EventType.CLICK, this.closeFullImage, this);
 		}
+
+		if (this.previousRegionButton?.node) {
+			this.previousRegionButton.node.off(Button.EventType.CLICK, this.onPreviousRegionClicked, this);
+		}
+
+		if (this.nextRegionButton?.node) {
+			this.nextRegionButton.node.off(Button.EventType.CLICK, this.onNextRegionClicked, this);
+		}
 	}
 
 	private async open(): Promise<void> {
@@ -102,18 +126,63 @@ export class CollectionUI extends Component {
 		}
 
 		this.isOpening = true;
+
+		try {
+			const currentRegionNumber = ServiceContainer.get(ProgressionManager).getCurrentRegionNumber();
+			this.selectedRegionNumber = Math.min(
+				Math.max(1, currentRegionNumber),
+				this.getLastSelectableRegionNumber(),
+			);
+			await this.loadRegion(this.selectedRegionNumber);
+		} finally {
+			this.isOpening = false;
+		}
+	}
+
+	private async onPreviousRegionClicked(): Promise<void> {
+		await this.changeRegion(-1);
+	}
+
+	private async onNextRegionClicked(): Promise<void> {
+		await this.changeRegion(1);
+	}
+
+	private async changeRegion(offset: number): Promise<void> {
+		if (this.isOpening) {
+			return;
+		}
+
+		const targetRegionNumber = this.selectedRegionNumber + offset;
+		if (!this.isRegionSelectable(targetRegionNumber)) {
+			return;
+		}
+
+		this.isOpening = true;
+		const previousRegionNumber = this.selectedRegionNumber;
+		this.selectedRegionNumber = targetRegionNumber;
+
+		try {
+			await this.loadRegion(targetRegionNumber);
+		} catch (error) {
+			this.selectedRegionNumber = previousRegionNumber;
+			throw error;
+		} finally {
+			this.isOpening = false;
+		}
+	}
+
+	private async loadRegion(regionNumber: number): Promise<void> {
 		const loadingService = ServiceContainer.get(LoadingService);
 		const localization = ServiceContainer.get(LocalizationManager);
 		loadingService.setMessage(localization.t('loadingCollection'));
 		loadingService.show();
 
 		try {
-			await this.populate();
+			await this.populate(regionNumber);
 			this.requireTitleLabel().string = localization.t('collectionScreenTitle');
 			this.showCollections();
 			this.requireScrollView().scrollToTop(0);
 		} finally {
-			this.isOpening = false;
 			loadingService.hide();
 		}
 	}
@@ -147,13 +216,12 @@ export class CollectionUI extends Component {
 		this.requireFullScreenRoot().active = false;
 	}
 
-	private async populate(): Promise<void> {
+	private async populate(regionNumber: number): Promise<void> {
 		const progressionManager = ServiceContainer.get(ProgressionManager);
 		const levelService = ServiceContainer.get(LevelService);
 		const imageService = ServiceContainer.get(ImageService);
 		const localization = ServiceContainer.get(LocalizationManager);
 
-		const regionNumber = progressionManager.getCurrentRegionNumber();
 		const catalog = await levelService.getLevelCatalog(regionNumber);
 		const regionImage = await imageService.getImageById(catalog.regionImageId);
 
@@ -182,7 +250,9 @@ export class CollectionUI extends Component {
 				cellId: `region-${regionNumber}`,
 				isRegion: true,
 				spriteFrame: regionImage,
-				isCompleted: progressionManager.isCurrentRegionCompleted(),
+				isCompleted:
+					catalog.levels.length > 0 &&
+					catalog.levels.every((level) => progressionManager.isCompleted(level.levelId)),
 				levelNumber: null,
 				label: localization.t('collectionRegionLabel'),
 			},
@@ -204,6 +274,33 @@ export class CollectionUI extends Component {
 
 			cellUI.render(blueprint.item);
 			this.bindCellClick(cellNode, blueprint.item);
+		}
+
+		this.updateRegionButtons();
+	}
+
+	private isRegionSelectable(regionNumber: number): boolean {
+		return regionNumber >= 1 && regionNumber <= this.getLastSelectableRegionNumber();
+	}
+
+	private getLastSelectableRegionNumber(): number {
+		const configuredMaxRegionNumber = Math.max(1, Math.floor(this.maxRegionNumber));
+		if (!this.showOnlyAvailableRegions) {
+			return configuredMaxRegionNumber;
+		}
+
+		const currentRegionNumber = ServiceContainer.get(ProgressionManager).getCurrentRegionNumber();
+		return Math.max(1, Math.min(configuredMaxRegionNumber, currentRegionNumber));
+	}
+
+	private updateRegionButtons(): void {
+		const lastRegionNumber = this.getLastSelectableRegionNumber();
+		if (this.previousRegionButton) {
+			this.previousRegionButton.interactable = this.selectedRegionNumber > 1;
+		}
+
+		if (this.nextRegionButton) {
+			this.nextRegionButton.interactable = this.selectedRegionNumber < lastRegionNumber;
 		}
 	}
 

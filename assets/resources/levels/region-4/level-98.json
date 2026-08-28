@@ -1,0 +1,19 @@
+{
+    "id": "level-98",
+    "levelNumber": 98,
+    "gridColumnCount": 4,
+    "gridRowCount": 4,
+    "gridCellWidth": 300,
+    "gridCellHeight": 300,
+    "imageId": "sprites/images/regions/region-4/hbieser-costa-rica-9301364_1920/spriteFrame",
+    "gameMode": "rectSwapMerge",
+    "pieceColumns": 4,
+    "pieceRows": 4,
+    "snapThreshold": 10,
+    "minPieceSize": 1,
+    "maxPieceSize": 4,
+    "crossingThresholdFraction": 0.5,
+    "mergeEnabled": true,
+    "allowDisconnectedShapeCells": true,
+    "rewardCoins": 10
+}

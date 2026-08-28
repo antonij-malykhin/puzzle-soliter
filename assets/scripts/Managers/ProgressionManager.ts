@@ -33,6 +33,16 @@ export class ProgressionManager {
         return this.requireProgress().coins;
     }
 
+    public getSuggestionCount(): number {
+        return this.requireProgress().suggestionCount;
+    }
+
+    public async setSuggestionCount(count: number): Promise<void> {
+        const suggestionCount = Math.max(0, count);
+        this.requireProgress().suggestionCount = suggestionCount;
+        await this.save();
+    }
+
     public async addCoins(amount: number): Promise<void> {
         if (amount <= 0) {
             return;
@@ -74,6 +84,12 @@ export class ProgressionManager {
         }
 
         return this.getFirstIncompleteLevelId();
+    }
+
+    public getCurrentLevelNumber(): number {
+        const currentLevelId = this.getCurrentLevelId();
+        const match = currentLevelId.match(/level-(\d+)/);
+        return match ? Number(match[1]) : 0;
     }
 
     public async selectLevel(levelId: string): Promise<void> {

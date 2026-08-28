@@ -1,3 +1,5 @@
+import { DEFAULT_SUGGESTION_COUNT } from '../../Core/Config/GameConstants';
+
 export const DEFAULT_STARTING_COINS = 50;
 
 export interface GameProgress {
@@ -8,6 +10,7 @@ export interface GameProgress {
     recentlyCompletedLevelId: string | null;
     regionNumber: number;
     coins: number;
+    suggestionCount: number;
 }
 
 export const createDefaultGameProgress = (): GameProgress => ({
@@ -18,4 +21,5 @@ export const createDefaultGameProgress = (): GameProgress => ({
     recentlyCompletedLevelId: null,
     regionNumber: 1,
     coins: DEFAULT_STARTING_COINS,
+    suggestionCount: DEFAULT_SUGGESTION_COUNT,
 });

@@ -3,13 +3,22 @@ import { LevelData } from '../../Data/Models/LevelData';
 import { LevelCatalogData, LevelCatalogEntry } from '../../Data/Models/LevelCatalog';
 import { JsonAsset, resources } from 'cc';
 import {
+    LEVELS_PER_REGION,
     LEVEL_CATALOG_RESOURCE_PATH,
     TRAINING_LEVEL_ID,
     TRAINING_LEVEL_RESOURCE_PATH,
 } from '../../Core/Config/GameConstants';
 
 export class ResourcesLevelProvider implements ILevelProvider {
+    private readonly levelCache = new Map<string, LevelData>();
+    private readonly catalogCache = new Map<number, LevelCatalogData>();
+
     public async getLevel(levelId: string): Promise<LevelData> {
+        const cachedLevel = this.levelCache.get(levelId);
+        if (cachedLevel) {
+            return cachedLevel;
+        }
+
         const requestedLevelPath = this.resolveLevelPath(levelId);
 
         const levelData = await new Promise<LevelData>((resolve, reject) => {
@@ -23,6 +32,7 @@ export class ResourcesLevelProvider implements ILevelProvider {
             });
         });
 
+        this.levelCache.set(levelId, levelData);
         return levelData;
     }
 
@@ -31,10 +41,16 @@ export class ResourcesLevelProvider implements ILevelProvider {
     }
 
     public async getLevelCatalog(regionNumber: number): Promise<LevelCatalogData> {
+        const cachedCatalog = this.catalogCache.get(regionNumber);
+        if (cachedCatalog) {
+            return cachedCatalog;
+        }
+
+        const catalogPath = `${LEVEL_CATALOG_RESOURCE_PATH}-${regionNumber}/region-${regionNumber}`;
         const catalog = await new Promise<LevelCatalogData>((resolve, reject) => {
-            resources.load(LEVEL_CATALOG_RESOURCE_PATH + "-" + regionNumber, JsonAsset, (error, jsonAsset) => {
+            resources.load(catalogPath, JsonAsset, (error, jsonAsset) => {
                 if (error || !jsonAsset) {
-                    reject(error ?? new Error(`Level catalog json not found: ${LEVEL_CATALOG_RESOURCE_PATH + "-" + regionNumber}`));
+                    reject(error ?? new Error(`Level catalog json not found: ${catalogPath}`));
                     return;
                 }
 
@@ -43,7 +59,7 @@ export class ResourcesLevelProvider implements ILevelProvider {
         });
 
         const levels = Array.isArray(catalog.levels) ? catalog.levels : [];
-        return {
+        const result: LevelCatalogData = {
             regionImageId: catalog.regionImageId,
             cols: catalog.cols,
             rows: catalog.rows,
@@ -59,6 +75,9 @@ export class ResourcesLevelProvider implements ILevelProvider {
                     return left.gridX - right.gridX;
                 }),
         };
+
+        this.catalogCache.set(regionNumber, result);
+        return result;
     }
 
     private resolveLevelPath(levelId: string): string {
@@ -66,6 +85,8 @@ export class ResourcesLevelProvider implements ILevelProvider {
             return TRAINING_LEVEL_RESOURCE_PATH;
         }
 
-        return `levels/${levelId}`;
+        const levelNumber = Number(levelId.replace('level-', ''));
+        const regionNumber = Math.floor((levelNumber - 1) / LEVELS_PER_REGION) + 1;
+        return `levels/region-${regionNumber}/${levelId}`;
     }
 }

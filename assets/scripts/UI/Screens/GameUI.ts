@@ -28,9 +28,9 @@ export class GameUI extends UIView {
         super.onLoad();
     }
 
-    public initialize(levelId: string, eventBus: EventBus<GameEventMap>, onBackToLobbyRequested: () => void, onSuggestionRequested: () => void): void {
-        this.setLevel(levelId);
-        this.suggestionUI.initialize(eventBus);
+    public initialize(levelNumber: string, suggestionCount: number, eventBus: EventBus<GameEventMap>, onBackToLobbyRequested: () => void, onSuggestionRequested: () => void): void {
+        this.setLevel(levelNumber);
+        this.suggestionUI.initialize(eventBus, suggestionCount);
 
         this.unbindButtons();
         this.backHandler = onBackToLobbyRequested;
@@ -39,9 +39,9 @@ export class GameUI extends UIView {
         this.suggestionButton!.node.on(Button.EventType.CLICK, this.suggestionHandler);
     }
 
-    public setLevel(levelId: string): void {
+    public setLevel(levelNumber: string): void {
         if (this.levelLabel) {
-            this.levelLabel.string = ServiceContainer.get(LocalizationManager).t('gameLevel', { id: levelId });
+            this.levelLabel.string = ServiceContainer.get(LocalizationManager).t('gameLevel', { number: levelNumber });
         }
     }
 

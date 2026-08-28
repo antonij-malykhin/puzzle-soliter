@@ -1,0 +1,184 @@
+{
+  "regionImageId": "sprites/images/regions/region-3/zz-region-3/spriteFrame",
+  "cols": 5,
+  "rows": 5,
+  "spacingX": 5,
+  "spacingY": 5,
+  "levels": [
+    {
+      "levelId": "level-51",
+      "levelNumber": 51,
+      "gridX": 1,
+      "gridY": 1,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-52",
+      "levelNumber": 52,
+      "gridX": 2,
+      "gridY": 1,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-53",
+      "levelNumber": 53,
+      "gridX": 3,
+      "gridY": 1,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-54",
+      "levelNumber": 54,
+      "gridX": 4,
+      "gridY": 1,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-55",
+      "levelNumber": 55,
+      "gridX": 5,
+      "gridY": 1,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-56",
+      "levelNumber": 56,
+      "gridX": 1,
+      "gridY": 2,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-57",
+      "levelNumber": 57,
+      "gridX": 2,
+      "gridY": 2,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-58",
+      "levelNumber": 58,
+      "gridX": 3,
+      "gridY": 2,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-59",
+      "levelNumber": 59,
+      "gridX": 4,
+      "gridY": 2,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-60",
+      "levelNumber": 60,
+      "gridX": 5,
+      "gridY": 2,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-61",
+      "levelNumber": 61,
+      "gridX": 1,
+      "gridY": 3,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-62",
+      "levelNumber": 62,
+      "gridX": 2,
+      "gridY": 3,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-63",
+      "levelNumber": 63,
+      "gridX": 3,
+      "gridY": 3,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-64",
+      "levelNumber": 64,
+      "gridX": 4,
+      "gridY": 3,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-65",
+      "levelNumber": 65,
+      "gridX": 5,
+      "gridY": 3,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-66",
+      "levelNumber": 66,
+      "gridX": 1,
+      "gridY": 4,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-67",
+      "levelNumber": 67,
+      "gridX": 2,
+      "gridY": 4,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-68",
+      "levelNumber": 68,
+      "gridX": 3,
+      "gridY": 4,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-69",
+      "levelNumber": 69,
+      "gridX": 4,
+      "gridY": 4,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-70",
+      "levelNumber": 70,
+      "gridX": 5,
+      "gridY": 4,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-71",
+      "levelNumber": 71,
+      "gridX": 1,
+      "gridY": 5,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-72",
+      "levelNumber": 72,
+      "gridX": 2,
+      "gridY": 5,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-73",
+      "levelNumber": 73,
+      "gridX": 3,
+      "gridY": 5,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-74",
+      "levelNumber": 74,
+      "gridX": 4,
+      "gridY": 5,
+      "cardBackFrontImageId": "images/level-card-back-front/spriteFrame"
+    },
+    {
+      "levelId": "level-75",
+      "levelNumber": 75,
+      "gridX": 5,
+      "gridY": 5,
+      "cardBackFrontImageId": "images/level-hard-card-back-front/spriteFrame"
+    }
+  ]
+}

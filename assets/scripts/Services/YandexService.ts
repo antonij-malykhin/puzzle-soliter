@@ -5,6 +5,19 @@ export interface LeaderboardResult {
     userRank: number | null;
 }
 
+export interface InterstitialCallbacks {
+    onOpen?: () => void;
+    onClose?: () => void;
+    onError?: () => void;
+}
+
+export interface RewardedCallbacks {
+    onOpen?: () => void;
+    onRewarded?: () => void;
+    onClose?: () => void;
+    onError?: () => void;
+}
+
 /**
  * Удобный фасад поверх Yandex Games SDK.
  * В окружениях без SDK (TypeEditor/обычный предпросмотр) сервис безопасно
@@ -51,27 +64,31 @@ export class YandexService {
 
     // ---------------------------------------------------------------- Реклама
 
-    public showInterstitial(onClose?: () => void): void {
+    public showInterstitial(callbacks: InterstitialCallbacks = {}): void {
         if (!this.isAvailable()) {
             return;
         }
 
         this.getSDK().adv.showFullscreenAdv({
             callbacks: {
-                onClose: () => onClose?.(),
+                onOpen: () => callbacks.onOpen?.(),
+                onClose: () => callbacks.onClose?.(),
+                onError: () => callbacks.onError?.(),
             },
         });
     }
 
-    public showRewarded(onRewarded: () => void, onError?: () => void): void {
+    public showRewarded(callbacks: RewardedCallbacks = {}): void {
         if (!this.isAvailable()) {
             return;
         }
 
         this.getSDK().adv.showRewardedVideo({
             callbacks: {
-                onRewarded,
-                onError: () => onError?.(),
+                onOpen: () => callbacks.onOpen?.(),
+                onRewarded: () => callbacks.onRewarded?.(),
+                onClose: () => callbacks.onClose?.(),
+                onError: () => callbacks.onError?.(),
             },
         });
     }

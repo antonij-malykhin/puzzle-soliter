@@ -2,6 +2,7 @@ import { YandexConfig } from '../Core/Config/YandexConfig';
 import { YandexService } from '../Services/YandexService';
 import { ProgressionManager } from './ProgressionManager';
 import { SettingsManager } from './SettingsManager';
+import { AudioManager } from './AudioManager';
 
 /**
  * Полибардизация показа рекламы: троттлинг interstitial и награда за reward-видео.
@@ -13,6 +14,7 @@ export class YandexAdManager {
         private readonly yandexService: YandexService,
         private readonly settingsManager: SettingsManager,
         private readonly progressionManager: ProgressionManager,
+        private readonly audioManager: AudioManager,
     ) {}
 
     public canShowInterstitial(): boolean {
@@ -34,7 +36,14 @@ export class YandexAdManager {
         }
 
         this.lastInterstitialTimestamp = Date.now();
-        this.yandexService.showInterstitial(onClose);
+        this.yandexService.showInterstitial({
+            onOpen: () => this.audioManager.pauseForAd(),
+            onClose: () => {
+                this.audioManager.resumeAfterAd();
+                onClose?.();
+            },
+            onError: () => this.audioManager.resumeAfterAd(),
+        });
     }
 
     /**
@@ -47,13 +56,31 @@ export class YandexAdManager {
             return;
         }
 
-        this.yandexService.showRewarded(
-            () => {
+        let completionSent = false;
+        const complete = (granted: boolean): void => {
+            if (completionSent) {
+                return;
+            }
+
+            completionSent = true;
+            onCompleted(granted);
+        };
+
+        this.yandexService.showRewarded({
+            onOpen: () => this.audioManager.pauseForAd(),
+            onRewarded: () => {
                 void this.grantReward();
-                onCompleted(true);
+                complete(true);
             },
-            () => onCompleted(false),
-        );
+            onClose: () => {
+                this.audioManager.resumeAfterAd();
+                complete(false);
+            },
+            onError: () => {
+                this.audioManager.resumeAfterAd();
+                complete(false);
+            },
+        });
     }
 
     private async grantReward(): Promise<void> {

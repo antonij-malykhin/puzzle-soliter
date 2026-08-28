@@ -3,7 +3,7 @@ import { GameSettings } from '../../Data/Models/GameSettings';
 
 export interface GameEventMap {
     WalletBalanceChanged: { newBalance: number };
-    GameStarted: { levelId: string };
+    GameStarted: { levelNumber: string };
     GameStateChanged: { previous: GameState; current: GameState };
     LevelLoaded: { levelId: string; gridColumnCount: number; gridRowCount: number; gridCellWidth: number; gridCellHeight: number;};
     PieceMoved: { pieceId: string; origin: { x: number; y: number } };
@@ -23,4 +23,6 @@ export interface GameEventMap {
     SettingsChanged: { settings: GameSettings };
     SuggestionProvided: { newCount : number };
     SuggestionResult: { firstPieceId: string; secondPieceId: string };
+    MusicVolumeChanged: { volume: number };
+    SFXVolumeChanged: { volume: number };
 }

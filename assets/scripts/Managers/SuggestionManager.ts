@@ -15,6 +15,10 @@ export class SuggestionManager {
         this.suggestionCount = suggestionCount;
     }
 
+    public async initialize(): Promise<void> {
+        this.suggestionCount = this.progressionManager.getSuggestionCount();
+    }
+
     public isSuggestionAvailable(): boolean {
         return this.suggestionCount > 0;
     }
@@ -30,7 +34,7 @@ export class SuggestionManager {
      */
     public async provideSuggestion(): Promise<boolean> {
         if (this.suggestionCount > 0) {
-            this.consumeSuggestion();
+            await this.consumeSuggestion();
             return true;
         }
 
@@ -39,12 +43,13 @@ export class SuggestionManager {
         }
 
         await this.progressionManager.spendCoins(this.suggestionPrice);
-        this.consumeSuggestion();
+        await this.consumeSuggestion();
         return true;
     }
 
-    private consumeSuggestion(): void {
-        this.suggestionCount -= 1;
+    private async consumeSuggestion(): Promise<void> {
+        this.suggestionCount = Math.max(0, this.suggestionCount - 1);
+        await this.progressionManager.setSuggestionCount(this.suggestionCount);
         this.eventBus.emit('SuggestionProvided', { newCount: this.suggestionCount });
     }
 }

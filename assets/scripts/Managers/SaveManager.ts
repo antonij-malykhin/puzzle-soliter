@@ -36,6 +36,9 @@ export class SaveManager {
             recentlyCompletedLevelId: stored.recentlyCompletedLevelId ?? defaults.recentlyCompletedLevelId,
             regionNumber: typeof stored.regionNumber === 'number' ? stored.regionNumber : defaults.regionNumber,
             coins: typeof stored.coins === 'number' ? stored.coins : defaults.coins,
+            suggestionCount: typeof stored.suggestionCount === 'number'
+                ? stored.suggestionCount
+                : defaults.suggestionCount,
         };
     }
 

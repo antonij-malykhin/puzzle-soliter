@@ -1,11 +1,8 @@
 import { _decorator, Component } from 'cc';
 import { VictoryUI } from './Screens/VictoryUI';
 import { GameUI } from './Screens/GameUI';
-import { PauseUI } from './Screens/PauseUI';
-import { SettingsUI } from './Screens/SettingsUI';
 import { GameEventMap } from '../Core/Events/GameEventMap';
 import { EventBus } from '../Core/Events/EventBus';
-import { GameState } from '../Core/Enums/GameState';
 
 const { ccclass, property } = _decorator;
 @ccclass('GameplayUI')
@@ -25,6 +22,7 @@ export class GameplayUI extends Component {
 
     public async initialize(
         eventBus: EventBus<GameEventMap>,
+        suggestionCount: number,
         options: {
             onVictoryNextRequested: () => void;
             onBackToLobbyRequested: () => void;
@@ -33,13 +31,13 @@ export class GameplayUI extends Component {
     ): Promise<void> {
         this.victoryUI.setNextHandler(options.onVictoryNextRequested);
 
-        this.disposables.push(eventBus.on('GameStarted', ({ levelId }) => {
-            this.gameUI?.initialize(levelId, eventBus, options.onBackToLobbyRequested, options.onSuggestionRequested);
+        this.disposables.push(eventBus.on('GameStarted', ({ levelNumber: levelNumber }) => {
+            this.gameUI?.initialize(levelNumber, suggestionCount, eventBus, options.onBackToLobbyRequested, options.onSuggestionRequested);
             this.victoryUI.hide();
             this.gameUI.show();
         }));
 
-        this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, levelNumber: elapsedSeconds }) => {
+        this.disposables.push(eventBus.on('PuzzleCompleted', async ({ levelId, levelNumber }) => {
             await this.victoryUI.show();
         }));
     }

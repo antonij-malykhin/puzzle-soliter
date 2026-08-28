@@ -16,6 +16,8 @@ import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
 import { YandexAdManager } from './Managers/YandexAdManager';
 import { LoadingService } from './Services/LoadingService';
 import { LocalizationManager } from './Managers/LocalizationManager';
+import { AudioManager } from './Managers/AudioManager';
+import { MUSIC_PLAYLIST_IDS } from './Core/Config/AudioIds';
 
 const { ccclass, property } = _decorator;
 
@@ -43,12 +45,14 @@ export class LobbyEntryPoint extends Component {
     private imageSliceService!: SpriteFrameSliceService;
     private regionNumber: number = 1;
     private yandexAdManager!: YandexAdManager;
+    private audioManager!: AudioManager;
 
     protected async onLoad(): Promise<void> {
         log('LobbyEntryPoint: Starting lobby initialization...');
 
         this.onPlayButtonClicked = this.loadGameplayScene;
         this.requestServices();
+        this.audioManager.playMusicPlaylist(MUSIC_PLAYLIST_IDS);
         this.setLoadingMessage();
 
         try {
@@ -100,6 +104,7 @@ export class LobbyEntryPoint extends Component {
         this.sceneService = ServiceContainer.get(SceneManager);
         this.eventBus = ServiceContainer.get(EventBus);
         this.yandexAdManager = ServiceContainer.get(YandexAdManager);
+        this.audioManager = ServiceContainer.get(AudioManager);
     }
 
     private loadGameplayScene() {

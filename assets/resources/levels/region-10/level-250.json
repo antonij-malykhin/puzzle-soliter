@@ -1,0 +1,19 @@
+{
+    "id": "level-250",
+    "levelNumber": 250,
+    "gridColumnCount": 5,
+    "gridRowCount": 5,
+    "gridCellWidth": 300,
+    "gridCellHeight": 300,
+    "imageId": "sprites/images/regions/region-10/ymyphoto-plum-blossoms-8579641_1920/spriteFrame",
+    "gameMode": "rectSwapMerge",
+    "pieceColumns": 5,
+    "pieceRows": 5,
+    "snapThreshold": 10,
+    "minPieceSize": 1,
+    "maxPieceSize": 4,
+    "crossingThresholdFraction": 0.5,
+    "mergeEnabled": true,
+    "allowDisconnectedShapeCells": true,
+    "rewardCoins": 10
+}
