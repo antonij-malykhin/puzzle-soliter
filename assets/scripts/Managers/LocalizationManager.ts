@@ -1,52 +1,25 @@
-export class LocalizationManager {
-    private currentLanguage = 'en';
+import { YandexService } from '../Services/YandexService';
+import { ILocalizationProvider, LocalizationParams } from './Localization/ILocalizationProvider';
+import { LocalLocalizationProvider } from './Localization/LocalLocalizationProvider';
+import { YandexLocalizationProvider } from './Localization/YandexLocalizationProvider';
 
-    private readonly strings: Record<string, Record<string, string>> = {
-        en: {
-            loading: 'Loading...',
-            loadingLobby: 'Loading lobby...',
-            loadingLevel: 'Loading level...',
-            loadingCollection: 'Loading collection...',
-            loadingLeaderboard: 'Loading leaderboard...',
-            lobbyLevel: 'Level {number}',
-            lobbyLevelNotSelected: 'Level: not selected',
-            gameLevel: 'Level: {number}',
-            collectionRegionLabel: 'Bonus',
-            collectionScreenTitle: 'Collection',
-            leaderboardTitle: 'Leaderboard',
-        },
-        ru: {
-            loading: 'Загрузка...',
-            loadingLobby: 'Загрузка лобби...',
-            loadingLevel: 'Загрузка уровня...',
-            loadingCollection: 'Загрузка коллекции...',
-            loadingLeaderboard: 'Загрузка таблицы лидеров...',
-            lobbyLevel: 'Уровень {number}',
-            lobbyLevelNotSelected: 'Уровень: не выбран',
-            gameLevel: 'Уровень: {number}',
-            collectionRegionLabel: 'Бонус',
-            collectionScreenTitle: 'Коллекция',
-            leaderboardTitle: 'Таблица лидеров',
-        },
-    };
+export class LocalizationManager {
+    private readonly activeProvider: ILocalizationProvider;
+
+    public constructor(yandexService: YandexService, defaultLanguage: string) {
+        const localProvider = new LocalLocalizationProvider(defaultLanguage);
+        this.activeProvider = new YandexLocalizationProvider(yandexService, localProvider, defaultLanguage);
+    }
 
     public setLanguage(language: string): void {
-        this.currentLanguage = language;
+        this.activeProvider.setLanguage(language);
     }
 
     public getLanguage(): string {
-        return this.currentLanguage;
+        return this.activeProvider.getLanguage();
     }
 
-    public t(key: string, params?: Record<string, string | number>): string {
-        const dictionary = this.strings[this.currentLanguage] ?? this.strings.en;
-        let result = dictionary[key] ?? key;
-
-        Object.keys(params ?? {}).forEach((name) => {
-            const value = (params as Record<string, string | number>)[name];
-            result = result.replace(`{${name}}`, String(value));
-        });
-
-        return result;
+    public t(key: string, params?: LocalizationParams): string {
+        return this.activeProvider.t(key, params);
     }
 }

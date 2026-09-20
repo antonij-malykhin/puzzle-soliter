@@ -5,6 +5,8 @@ import { UIView } from '../Base/UIView';
 import { ServiceContainer } from '../../Core/ServiceContainer';
 import { EventBus } from '../../Core/Events/EventBus';
 import { SettingsManager } from '../../Managers/SettingsManager';
+import { AudioManager } from '../../Managers/AudioManager';
+import { SFX_IDS } from '../../Core/Config/AudioIds';
 
 const { ccclass, property } = _decorator;
 
@@ -47,6 +49,7 @@ export class SettingsUI extends UIView {
     private onSFXVolumeChanged(slider: Slider): void {
         const volume = slider.progress;
         ServiceContainer.get(EventBus<GameEventMap>).emit('SFXVolumeChanged', { volume });
+        ServiceContainer.get(AudioManager).playSfx(SFX_IDS.MERGE);
     }
 
     private onCloseButtonClicked(): void {

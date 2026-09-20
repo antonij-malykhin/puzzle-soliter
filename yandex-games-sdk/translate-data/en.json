@@ -1,0 +1,20 @@
+{
+    "loading": "Loading...",
+    "loadingLobby": "Loading lobby...",
+    "loadingLevel": "Loading level...",
+    "loadingCollection": "Loading collection...",
+    "loadingLeaderboard": "Loading leaderboard...",
+    "lobbyLevel": "Level {number}",
+    "lobbyLevelNotSelected": "Level: not selected",
+    "gameLevel": "Level: {number}",
+    "collectionRegionLabel": "Bonus",
+    "collectionScreenTitle": "Collection",
+    "leaderboardTitle": "Leaderboard",
+    "settingsTitle": "Settings",
+    "musicTitle": "Music",
+    "soundTitle": "Sound",
+    "playTitle": "Play",
+    "previousRegionTitle": "Previous region",
+    "nextRegionTitle": "Next region",
+    "regionNumber": "Region: {number}"
+}

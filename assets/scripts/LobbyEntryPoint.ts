@@ -18,6 +18,7 @@ import { LoadingService } from './Services/LoadingService';
 import { LocalizationManager } from './Managers/LocalizationManager';
 import { AudioManager } from './Managers/AudioManager';
 import { MUSIC_PLAYLIST_IDS } from './Core/Config/AudioIds';
+import { LobbyDebugPanel } from './UI/Screens/LobbyDebugPanel';
 
 const { ccclass, property } = _decorator;
 
@@ -31,6 +32,9 @@ export class LobbyEntryPoint extends Component {
 
     @property(Button)
     private debugCompleteRegionButton: Button | null = null;
+
+    @property(LobbyDebugPanel)
+    private debugPanel: LobbyDebugPanel | null = null;
 
     private regionCardCount: number = 25;
     private onPlayButtonClicked: () => void = () => {};
@@ -46,6 +50,7 @@ export class LobbyEntryPoint extends Component {
     private regionNumber: number = 1;
     private yandexAdManager!: YandexAdManager;
     private audioManager!: AudioManager;
+    private regionImage: SpriteFrame | null = null;
 
     protected async onLoad(): Promise<void> {
         log('LobbyEntryPoint: Starting lobby initialization...');
@@ -57,24 +62,28 @@ export class LobbyEntryPoint extends Component {
 
         try {
             await this.initialize();
-            const regionImage = await this.imageService.getImageById(this.catalogData!.regionImageId);
+            this.regionImage = await this.imageService.getImageById(this.catalogData!.regionImageId);
+
+            this.debugPanel?.initialize(this.progressionManager, async () => {
+                await this.sceneService.loadLobbyScene();
+            });
             
             if (this.debugCompleteRegionButton) {
                 this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
                     await this.progressionManager.markRegionCompleted();
-                    this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+                    this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this));
                     await this.lobbyUI.show();
                 }, this);
             }
 
             if (this.progressionManager.isCurrentRegionCompleted()) {
-                this.lobbyUI.showRegionComplete(regionImage, this.loadNextRegion.bind(this));
+                this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this));
                 await this.lobbyUI.show();
                 log('LobbyEntryPoint: Region complete screen shown.');
                 return;
             }
 
-            const lobbyCards = await this.getLobbyCards(regionImage);
+            const lobbyCards = await this.getLobbyCards(this.regionImage);
             await this.lobbyController.initialize(this.eventBus, this.lobbyUI, this.catalogData!.spacingX, this.catalogData!.spacingY, this.catalogData!.cols, this.catalogData!.rows, {
                 onPlayRequested: this.onPlayButtonClicked.bind(this),
                 lobbyCards: lobbyCards,
@@ -126,7 +135,11 @@ export class LobbyEntryPoint extends Component {
         this.sceneService.loadLobbyScene();
     }
 
-    private async getLobbyCards(regionImage: SpriteFrame): Promise<ReadonlyArray<LobbyLevelCardPresentation>> {
+    private async getLobbyCards(regionImage: SpriteFrame | null): Promise<ReadonlyArray<LobbyLevelCardPresentation>> {
+        if (!regionImage) {
+            throw new Error('Region image is not loaded.');
+        }
+
         const currentLevelId = this.progressionManager!.getCurrentLevelId();
         const catalogLevelCardWidth = this.lobbyLevelCardRootUiTransform.width / this.catalogData!.cols;
         const catalogLevelCardHeight = this.lobbyLevelCardRootUiTransform.height / this.catalogData!.rows;

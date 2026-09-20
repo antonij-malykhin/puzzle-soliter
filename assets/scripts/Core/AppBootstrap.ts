@@ -34,6 +34,7 @@ import { LoadingHUD } from '../UI/HUD/LoadingHUD';
 import { LoadingService } from '../Services/LoadingService';
 import { HttpImageDownloader } from '../Services/Content/HttpImageDownloader';
 import { ResourcesAudioClipProvider } from '../Services/Content/ResourcesAudioClipProvider';
+import { RegionImagePreloadService } from '../Services/RegionImagePreloadService';
 
 const { ccclass, property } = _decorator;
 
@@ -45,6 +46,9 @@ export class AppBootstrap extends Component {
 
     @property(LoadingHUD)
     private loadingHud: LoadingHUD | null = null;
+    
+    @property
+    private defaultLanguage: string = 'en';
 
     public async onLoad(): Promise<void> {
         director.addPersistRootNode(this.node);
@@ -65,6 +69,7 @@ export class AppBootstrap extends Component {
         await settingsManager.initialize();
         ServiceContainer.get(AudioManager).initialize(settingsManager.getSettings());
         await ServiceContainer.get(ProgressionManager).initialize();
+        ServiceContainer.get(RegionImagePreloadService).preloadCurrentRegionInBackground();
         await ServiceContainer.get(SuggestionManager).initialize();
         await ServiceContainer.get(IapManager).initialize();
     }
@@ -86,13 +91,18 @@ export class AppBootstrap extends Component {
         const saveManager = new SaveManager(new CloudStorageProvider(yandexService));
         const settingsManager = new SettingsManager(saveManager, eventBus);
         const audioManager = new AudioManager(eventBus, new ResourcesAudioClipProvider());
-        const localizationManager = new LocalizationManager();
+        const localizationManager = new LocalizationManager(yandexService, this.defaultLanguage);
         const sceneManager = new SceneManager();
         const gameManager = new GameManager(eventBus);
         const levelService = new LevelService(new ResourcesLevelProvider());
         const walletManager = new WalletManager(eventBus);
         const progressionManager = new ProgressionManager(saveManager, levelService, walletManager);
         const imageService = new ImageService(new ResourcesImageLoader(), new BundleImageLoader(), new HttpImageDownloader());
+        const regionImagePreloadService = new RegionImagePreloadService(
+            progressionManager,
+            levelService,
+            imageService,
+        );
         const suggestionManager = new SuggestionManager(progressionManager, eventBus);
         const yandexAdManager = new YandexAdManager(yandexService, settingsManager, progressionManager, audioManager);
         const iapManager = new IapManager(yandexService, progressionManager, settingsManager);
@@ -125,6 +135,7 @@ export class AppBootstrap extends Component {
         ServiceContainer.register(LevelService, levelService);
         ServiceContainer.register(ProgressionManager, progressionManager);
         ServiceContainer.register(ImageService, imageService);
+        ServiceContainer.register(RegionImagePreloadService, regionImagePreloadService);
         ServiceContainer.register(PuzzleManager, puzzleManager);
         ServiceContainer.register(SuggestionManager, suggestionManager);
         ServiceContainer.register(WalletManager, walletManager);

@@ -26,6 +26,8 @@ export interface RewardedCallbacks {
 export class YandexService {
     private sdk: YandexGames.SDK | null = null;
 
+    private static readonly DEFAULT_LANGUAGE = 'en';
+
     public async initialize(): Promise<void> {
         // 1. Проверяем, не инициализирован ли SDK повторно
         if (this.sdk !== null) {
@@ -51,6 +53,24 @@ export class YandexService {
 
     public isAvailable(): boolean {
         return this.sdk !== null;
+    }
+
+    public getEnvironmentLanguage(): string {
+        if (!this.isAvailable()) {
+            return YandexService.DEFAULT_LANGUAGE;
+        }
+
+        const environmentLanguage = this.getSDK().environment.i18n.lang;
+        if (environmentLanguage.length > 0) {
+            return environmentLanguage;
+        }
+
+        const browserLanguage = this.getSDK().environment.browser.lang;
+        if (browserLanguage.length > 0) {
+            return browserLanguage;
+        }
+
+        return YandexService.DEFAULT_LANGUAGE;
     }
 
     /** Сигнал о готовности игры к показу (LoadingAPI.ready). */

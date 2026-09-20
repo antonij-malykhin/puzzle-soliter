@@ -1,3 +1,50 @@
 {
-  "__version__": "1.3.9"
+  "__version__": "1.3.9",
+  "textureCompressConfig": {
+    "userPreset": {
+      "075NtGiVRL2JZN/9qKFZOr": {
+        "name": "New Compress Config",
+        "options": {
+          "web": {
+            "jpg": {
+              "quality": 50
+            }
+          }
+        }
+      }
+    },
+    "customConfigs": {}
+  },
+  "bundleConfig": {
+    "custom": {
+      "default": {
+        "displayName": "i18n:builder.asset_bundle.defaultConfig",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "isRemote": false,
+              "compressionType": "merge_dep"
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "isRemote": false,
+              "compressionType": "merge_dep"
+            },
+            "fallbackOptions": {
+              "compressionType": "merge_dep"
+            },
+            "overwriteSettings": {}
+          },
+          "miniGame": {
+            "fallbackOptions": {
+              "isRemote": false,
+              "compressionType": "merge_dep"
+            },
+            "configMode": "fallback"
+          }
+        }
+      }
+    }
+  }
 }

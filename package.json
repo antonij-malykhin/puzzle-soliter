@@ -3,5 +3,8 @@
   "uuid": "d9d829ba-5300-426f-aabb-d24de4107095",
   "creator": {
     "version": "3.8.6"
+  },
+  "scripts": {
+    "level:edit": "node tools/level-config-editor.js"
   }
 }

@@ -10,9 +10,7 @@ import {
 	ScrollView,
 	Size,
 	Sprite,
-	SpriteFrame,
-	UITransform,
-	Widget,
+	SpriteFrame
 } from 'cc';
 import { CollectionImagePresentation } from '../../Data/Models/CollectionImagePresentation';
 import { CollectionLevelCellUI } from './CollectionLevelCellUI';
@@ -20,7 +18,6 @@ import { ServiceContainer } from '../../Core/ServiceContainer';
 import { ProgressionManager } from '../../Managers/ProgressionManager';
 import { LevelService } from '../../Services/LevelService';
 import { ImageService } from '../../Services/ImageService';
-import { SpriteFrameSliceService } from '../../Services/SpriteFrameSliceService';
 import { LocalizationManager } from '../../Managers/LocalizationManager';
 import { LoadingService } from '../../Services/LoadingService';
 
@@ -30,8 +27,6 @@ const COLLECTION_CELL_WIDTH = 325;
 const COLLECTION_CELL_HEIGHT = 650;
 const COLLECTION_CELL_SPACING = 0;
 const COLLECTION_COLUMN_COUNT = 2;
-const FULL_IMAGE_MAX_WIDTH = 1040;
-const FULL_IMAGE_MAX_HEIGHT = 2300;
 const DEFAULT_MAX_REGION_NUMBER = 10;
 
 interface CollectionCellBlueprint {
@@ -84,10 +79,11 @@ export class CollectionUI extends Component {
 	public regionLevelImagePrefab: Prefab | null = null;
 
 	@property(Label)
-	public titleLabel: Label | null = null;
+	public regionTitleLabel: Label | null = null;
 
 	private isOpening = false;
 	private selectedRegionNumber = 1;
+	private userRegionNumber: number = 1;
 
 	protected onLoad(): void {
 		this.collectionButton?.node.on(Button.EventType.CLICK, this.open, this);
@@ -129,6 +125,8 @@ export class CollectionUI extends Component {
 
 		try {
 			const currentRegionNumber = ServiceContainer.get(ProgressionManager).getCurrentRegionNumber();
+			this.userRegionNumber = currentRegionNumber;
+			this.regionTitleLabel!.string = ServiceContainer.get(LocalizationManager).t("regionNumber", { number: currentRegionNumber });
 			this.selectedRegionNumber = Math.min(
 				Math.max(1, currentRegionNumber),
 				this.getLastSelectableRegionNumber(),
@@ -169,6 +167,18 @@ export class CollectionUI extends Component {
 		} finally {
 			this.isOpening = false;
 		}
+
+		if (this.selectedRegionNumber == this.userRegionNumber) {
+			this.nextRegionButton!.node.active = false;
+		} else {
+			this.nextRegionButton!.node.active = true;
+		}
+
+		if (this.selectedRegionNumber == 1) {
+			this.previousRegionButton!.node.active = false;
+		} else {
+			this.previousRegionButton!.node.active = true;
+		}
 	}
 
 	private async loadRegion(regionNumber: number): Promise<void> {
@@ -179,7 +189,6 @@ export class CollectionUI extends Component {
 
 		try {
 			await this.populate(regionNumber);
-			this.requireTitleLabel().string = localization.t('collectionScreenTitle');
 			this.showCollections();
 			this.requireScrollView().scrollToTop(0);
 		} finally {
@@ -192,13 +201,6 @@ export class CollectionUI extends Component {
 			throw new Error('Scroll view is not assigned.');
 		}
 		return this.scrollView;
-	}
-
-	private requireTitleLabel(): Label {
-		if (!this.titleLabel) {
-			throw new Error('Title label is not assigned.');
-		}
-		return this.titleLabel;
 	}
 
 	private showCollections(): void {
@@ -224,12 +226,29 @@ export class CollectionUI extends Component {
 
 		const catalog = await levelService.getLevelCatalog(regionNumber);
 		const regionImage = await imageService.getImageById(catalog.regionImageId);
+		const levelDataById = new Map(
+			await Promise.all(
+				catalog.levels.map(async (level) => {
+					const levelData = await levelService.getLevel(level.levelId);
+					return [level.levelId, levelData] as const;
+				}),
+			),
+		);
+
+		const spriteByLevelId = new Map(
+			await Promise.all(
+				catalog.levels.map(async (level) => {
+					const levelData = levelDataById.get(level.levelId);
+					const spriteFrame = levelData?.imageId ? await imageService.getImageById(levelData.imageId) : null;
+					return [level.levelId, spriteFrame] as const;
+				}),
+			),
+		);
 
 		const blueprints: CollectionCellBlueprint[] = [];
 
 		for (const level of catalog.levels) {
-			const levelData = await levelService.getLevel(level.levelId);
-			const spriteFrame = levelData.imageId ? await imageService.getImageById(levelData.imageId) : null;
+			const spriteFrame = spriteByLevelId.get(level.levelId) ?? null;
 
 			blueprints.push({
 				prefab: this.requireCommonLevelImagePrefab(),
@@ -257,8 +276,6 @@ export class CollectionUI extends Component {
 				label: localization.t('collectionRegionLabel'),
 			},
 		});
-
-		//this.configureLayout();
 
 		const content = this.requireContent();
 		content.removeAllChildren();
@@ -313,31 +330,6 @@ export class CollectionUI extends Component {
 
 	private openFullImage(spriteFrame: SpriteFrame): void {
 		const fullImageSprite = this.requireFullImageSprite();
-		// const rect = spriteFrame.rect;
-		// const aspectRatio = rect.width / rect.height;
-
-		// const uiTransform = fullImageSprite.getComponent(UITransform);
-
-		// const widget = fullImageSprite.getComponent(Widget);
-		// const parentSize = fullImageSprite.node.parent?.getComponent(UITransform)?.contentSize;
-		// let availableWidth = FULL_IMAGE_MAX_WIDTH;
-		// let availableHeight = FULL_IMAGE_MAX_HEIGHT;
-
-		// if (widget && parentSize) {
-		// 	availableWidth = Math.max(1, parentSize.width - widget.left - widget.right);
-		// 	availableHeight = Math.max(1, parentSize.height - widget.top - widget.bottom);
-		// 	widget.enabled = false;
-		// }
-
-		// let width = availableWidth;
-		// let height = width / aspectRatio;
-		// if (height > availableHeight) {
-		// 	height = availableHeight;
-		// 	width = height * aspectRatio;
-		// }
-
-		// uiTransform?.setContentSize(width, height);
-
 		fullImageSprite.spriteFrame = spriteFrame;
 		this.requireRootCollections().active = false;
 		this.requireFullScreenRoot().active = true;

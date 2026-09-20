@@ -2,10 +2,14 @@ import { GameProgress } from '../Data/Models/GameProgress';
 import { SaveManager } from './SaveManager';
 import { LevelService } from '../Services/LevelService';
 import { WalletManager } from './WalletManager';
+import { LEVELS_PER_REGION } from '../Core/Config/GameConstants';
 
 export class ProgressionManager {
     private progress: GameProgress | null = null;
     private orderedLevelIds: string[] = [];
+    private debugTargetLevelId: string | null = null;
+    private debugOrderedLevelIds: string[] | null = null;
+    private debugRegionNumber: number | null = null;
 
     public constructor(
         private readonly saveManager: SaveManager,
@@ -70,14 +74,23 @@ export class ProgressionManager {
     }
 
     public getOrderedLevelIds(): ReadonlyArray<string> {
-        return this.orderedLevelIds;
+        return this.getActiveOrderedLevelIds();
     }
 
     public getCurrentRegionNumber(): number {
+        if (this.getValidDebugTargetLevelId() && this.debugRegionNumber) {
+            return this.debugRegionNumber;
+        }
+
         return this.requireProgress().regionNumber;
     }
 
     public getCurrentLevelId(): string {
+        const debugTargetLevelId = this.getValidDebugTargetLevelId();
+        if (debugTargetLevelId) {
+            return debugTargetLevelId;
+        }
+
         const levelId = this.requireProgress().currentLevelId;
         if (levelId && this.orderedLevelIds.indexOf(levelId) >= 0) {
             return levelId;
@@ -92,6 +105,49 @@ export class ProgressionManager {
         return match ? Number(match[1]) : 0;
     }
 
+    public getSavedCurrentLevelId(): string {
+        const levelId = this.requireProgress().currentLevelId;
+        if (levelId && this.orderedLevelIds.indexOf(levelId) >= 0) {
+            return levelId;
+        }
+
+        return this.getFirstIncompleteLevelId();
+    }
+
+    public getDebugTargetLevelId(): string | null {
+        return this.getValidDebugTargetLevelId();
+    }
+
+    public async setDebugTargetLevelId(levelId: string): Promise<boolean> {
+        if (this.orderedLevelIds.indexOf(levelId) >= 0) {
+            this.debugOrderedLevelIds = this.orderedLevelIds;
+            this.debugRegionNumber = this.requireProgress().regionNumber;
+            this.debugTargetLevelId = levelId;
+            return true;
+        }
+
+        const targetRegionNumber = this.resolveRegionNumberForLevelId(levelId);
+        if (!targetRegionNumber) {
+            return false;
+        }
+
+        const targetOrderedLevelIds = await this.levelService.getOrderedLevelIds(targetRegionNumber);
+        if (targetOrderedLevelIds.indexOf(levelId) < 0) {
+            return false;
+        }
+
+        this.debugOrderedLevelIds = [...targetOrderedLevelIds];
+        this.debugRegionNumber = targetRegionNumber;
+        this.debugTargetLevelId = levelId;
+        return true;
+    }
+
+    public clearDebugTargetLevelId(): void {
+        this.debugTargetLevelId = null;
+        this.debugOrderedLevelIds = null;
+        this.debugRegionNumber = null;
+    }
+
     public async selectLevel(levelId: string): Promise<void> {
         if (this.orderedLevelIds.indexOf(levelId) < 0 || !this.isUnlocked(levelId)) {
             return;
@@ -102,7 +158,8 @@ export class ProgressionManager {
     }
 
     public isUnlocked(levelId: string): boolean {
-        const levelIndex = this.orderedLevelIds.indexOf(levelId);
+        const activeOrderedLevelIds = this.getActiveOrderedLevelIds();
+        const levelIndex = activeOrderedLevelIds.indexOf(levelId);
         if (levelIndex < 0) {
             return false;
         }
@@ -111,16 +168,19 @@ export class ProgressionManager {
             return true;
         }
 
-        const progress = this.requireProgress();
-        const previousLevelId = this.orderedLevelIds[levelIndex - 1];
-        return progress.completedLevelIds.indexOf(previousLevelId) >= 0;
+        const previousLevelId = activeOrderedLevelIds[levelIndex - 1];
+        return this.getCompletedLevelIdsView().indexOf(previousLevelId) >= 0;
     }
 
     public isCompleted(levelId: string): boolean {
-        return this.requireProgress().completedLevelIds.indexOf(levelId) >= 0;
+        return this.getCompletedLevelIdsView().indexOf(levelId) >= 0;
     }
 
     public async markRegionCompleted(): Promise<void> {
+        if (this.getValidDebugTargetLevelId()) {
+            return;
+        }
+
         const progress = this.requireProgress();
         for (const levelId of this.orderedLevelIds) {
             if (progress.completedLevelIds.indexOf(levelId) < 0) {
@@ -131,6 +191,10 @@ export class ProgressionManager {
     }
 
     public async markLevelCompleted(levelId: string, elapsedSeconds: number): Promise<void> {
+        if (this.getValidDebugTargetLevelId()) {
+            return;
+        }
+
         const progress = this.requireProgress();
         const isFirstCompletion = progress.completedLevelIds.indexOf(levelId) < 0;
         if (isFirstCompletion) {
@@ -165,16 +229,20 @@ export class ProgressionManager {
     }
 
     public isCurrentRegionCompleted(): boolean {
-        const progress = this.requireProgress();
+        const activeOrderedLevelIds = this.getActiveOrderedLevelIds();
         return (
-            this.orderedLevelIds.length > 0 &&
-            this.orderedLevelIds.every(
-                (levelId) => progress.completedLevelIds.indexOf(levelId) >= 0,
+            activeOrderedLevelIds.length > 0 &&
+            activeOrderedLevelIds.every(
+                (levelId) => this.getCompletedLevelIdsView().indexOf(levelId) >= 0,
             )
         );
     }
 
     public async advanceToNextRegion(): Promise<void> {
+        if (this.getValidDebugTargetLevelId()) {
+            return;
+        }
+
         const progress = this.requireProgress();
         progress.regionNumber += 1;
         this.orderedLevelIds = [
@@ -196,6 +264,48 @@ export class ProgressionManager {
             (levelId) => progress.completedLevelIds.indexOf(levelId) < 0,
         );
         return firstIncomplete ?? this.orderedLevelIds[0];
+    }
+
+    private getCompletedLevelIdsView(): ReadonlyArray<string> {
+        const debugTargetLevelId = this.getValidDebugTargetLevelId();
+        if (!debugTargetLevelId) {
+            return this.requireProgress().completedLevelIds;
+        }
+
+        const activeOrderedLevelIds = this.getActiveOrderedLevelIds();
+        const targetIndex = activeOrderedLevelIds.indexOf(debugTargetLevelId);
+        return targetIndex >= 0
+            ? activeOrderedLevelIds.slice(0, targetIndex)
+            : this.requireProgress().completedLevelIds;
+    }
+
+    private getActiveOrderedLevelIds(): ReadonlyArray<string> {
+        return this.getValidDebugTargetLevelId() && this.debugOrderedLevelIds
+            ? this.debugOrderedLevelIds
+            : this.orderedLevelIds;
+    }
+
+    private resolveRegionNumberForLevelId(levelId: string): number | null {
+        const match = levelId.match(/^level-(\d+)$/);
+        if (!match) {
+            return null;
+        }
+
+        const levelNumber = Number(match[1]);
+        return Math.floor((levelNumber - 1) / LEVELS_PER_REGION) + 1;
+    }
+
+    private getValidDebugTargetLevelId(): string | null {
+        if (!this.debugTargetLevelId || !this.debugOrderedLevelIds) {
+            return null;
+        }
+
+        if (this.debugOrderedLevelIds.indexOf(this.debugTargetLevelId) >= 0) {
+            return this.debugTargetLevelId;
+        }
+
+        this.clearDebugTargetLevelId();
+        return null;
     }
 
     private requireProgress(): GameProgress {

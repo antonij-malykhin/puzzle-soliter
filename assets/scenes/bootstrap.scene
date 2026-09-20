@@ -25,7 +25,9 @@
     ],
     "_active": true,
     "_components": [],
-    "_prefab": null,
+    "_prefab": {
+      "__id__": 23
+    },
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
@@ -55,7 +57,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 23
+      "__id__": 24
     },
     "_id": "817be21b-065c-48ad-adca-d685aa95dd73"
   },
@@ -118,6 +120,7 @@
     "loadingHud": {
       "__id__": 4
     },
+    "defaultLanguage": "en",
     "_id": "de924gHfZK879kkXm0zjKQ"
   },
   {
@@ -175,8 +178,8 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 540,
-      "y": 1200,
+      "x": 720,
+      "y": 1280,
       "z": 0
     },
     "_lrot": {
@@ -261,7 +264,7 @@
     "_priority": 0,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 1200,
+    "_orthoHeight": 1280,
     "_near": 0,
     "_far": 2000,
     "_color": {
@@ -761,8 +764,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1080,
-      "height": 2400
+      "width": 1440,
+      "height": 2560
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -818,30 +821,38 @@
     "_id": "c7burQhepHZ4RIh+24ulv3"
   },
   {
+    "__type__": "cc.PrefabInfo",
+    "root": null,
+    "asset": null,
+    "fileId": "817be21b-065c-48ad-adca-d685aa95dd73",
+    "instance": null,
+    "targetOverrides": null
+  },
+  {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 24
-    },
-    "shadows": {
       "__id__": 25
     },
-    "_skybox": {
+    "shadows": {
       "__id__": 26
     },
-    "fog": {
+    "_skybox": {
       "__id__": 27
     },
-    "octree": {
+    "fog": {
       "__id__": 28
     },
-    "skin": {
+    "octree": {
       "__id__": 29
     },
-    "lightProbeInfo": {
+    "skin": {
       "__id__": 30
     },
-    "postSettings": {
+    "lightProbeInfo": {
       "__id__": 31
+    },
+    "postSettings": {
+      "__id__": 32
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

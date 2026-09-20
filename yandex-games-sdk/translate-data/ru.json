@@ -1,0 +1,20 @@
+{
+    "loading": "Загрузка...",
+    "loadingLobby": "Загрузка лобби...",
+    "loadingLevel": "Загрузка уровня...",
+    "loadingCollection": "Загрузка коллекции...",
+    "loadingLeaderboard": "Загрузка таблицы лидеров...",
+    "lobbyLevel": "Уровень {number}",
+    "lobbyLevelNotSelected": "Уровень: не выбран",
+    "gameLevel": "Уровень: {number}",
+    "collectionRegionLabel": "Бонус",
+    "collectionScreenTitle": "Коллекция",
+    "leaderboardTitle": "Таблица лидеров",
+    "settingsTitle": "Настройки",
+    "musicTitle": "Музыка",
+    "soundTitle": "Звуки",
+    "playTitle": "Играть",
+    "previousRegionTitle": "Предыдущий регион",
+    "nextRegionTitle": "Следующий регион",
+    "regionNumber": "Регион: {number}"
+}
