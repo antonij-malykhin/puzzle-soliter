@@ -7,12 +7,19 @@ export let ysdk = {} as YandexGames.SDK;
 
 export const l10n = L10NManager.instance;
 
-if (cclegacy.GAME_VIEW || EDITOR) {
+const shouldSkipYandexInit =
+  EDITOR ||
+  cclegacy.GAME_VIEW ||
+  (typeof window !== "undefined" && window.parent === window);
+
+if (shouldSkipYandexInit) {
+  // Local editor / standalone preview: keep the project runnable without
+  // forcing the Yandex SDK handshake against a missing parent window.
   // We can use top-level await in editor
   // @ts-ignore
   await l10n["init"]();
 } else {
-  // for Runtime or Preview
+  // For a real Yandex-hosted runtime, initialize the SDK after project init.
   game.onPostProjectInitDelegate.add(async () => {
     ysdk = await YaGames.init();
     await l10n["init"]();

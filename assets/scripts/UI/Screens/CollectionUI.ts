@@ -2,6 +2,7 @@ import {
 	_decorator,
 	Button,
 	Component,
+	EventMouse,
 	instantiate,
 	Label,
 	Layout,
@@ -81,6 +82,12 @@ export class CollectionUI extends Component {
 	@property(Label)
 	public regionTitleLabel: Label | null = null;
 
+	@property({
+		type: Number,
+		tooltip: 'Множитель скорости прокрутки колесиком мыши (1 = стандартная)',
+	})
+	public mouseWheelSpeedMultiplier = 2.5;
+
 	private isOpening = false;
 	private selectedRegionNumber = 1;
 	private userRegionNumber: number = 1;
@@ -91,6 +98,7 @@ export class CollectionUI extends Component {
 		this.closeFullImageButton?.node.on(Button.EventType.CLICK, this.closeFullImage, this);
 		this.previousRegionButton?.node.on(Button.EventType.CLICK, this.onPreviousRegionClicked, this);
 		this.nextRegionButton?.node.on(Button.EventType.CLICK, this.onNextRegionClicked, this);
+		this.setupMouseWheelSpeed();
 		this.closeCollections();
 	}
 
@@ -203,6 +211,45 @@ export class CollectionUI extends Component {
 		return this.scrollView;
 	}
 
+	private setupMouseWheelSpeed(): void {
+		const sv = this.scrollView as any;
+		if (!sv || !sv.node) {
+			return;
+		}
+
+		// Отвязываем стандартный обработчик, если он уже был зарегистрирован при onEnable
+		sv.node.off(Node.EventType.MOUSE_WHEEL, sv._onMouseWheel, sv, true);
+
+		// Заменяем метод _onMouseWheel на экземпляре ScrollView с учетом множителя скорости
+		const originalOnMouseWheel = sv._onMouseWheel;
+		const self = this;
+		sv._onMouseWheel = function (event: EventMouse, captureListeners?: Node[]) {
+			if (!this.enabledInHierarchy) {
+				return;
+			}
+			const originalGetScrollY = event.getScrollY.bind(event);
+			const originalGetScrollX = event.getScrollX ? event.getScrollX.bind(event) : null;
+			const mult = self.mouseWheelSpeedMultiplier || 1;
+
+			event.getScrollY = () => originalGetScrollY() * mult;
+			if (originalGetScrollX) {
+				event.getScrollX = () => originalGetScrollX() * mult;
+			}
+
+			try {
+				originalOnMouseWheel.call(this, event, captureListeners);
+			} finally {
+				event.getScrollY = originalGetScrollY;
+				if (originalGetScrollX) {
+					event.getScrollX = originalGetScrollX;
+				}
+			}
+		};
+
+		// Регистрируем модифицированный обработчик
+		sv.node.on(Node.EventType.MOUSE_WHEEL, sv._onMouseWheel, sv, true);
+	}
+
 	private showCollections(): void {
 		this.requireRootCollections().active = true;
 		this.requireFullScreenRoot().active = false;
@@ -293,6 +340,7 @@ export class CollectionUI extends Component {
 			this.bindCellClick(cellNode, blueprint.item);
 		}
 
+		this.regionTitleLabel!.string = ServiceContainer.get(LocalizationManager).t("regionNumber", { number: regionNumber });
 		this.updateRegionButtons();
 	}
 

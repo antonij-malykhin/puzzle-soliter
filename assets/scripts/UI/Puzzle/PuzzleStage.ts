@@ -70,6 +70,7 @@ export class PuzzleStage extends Component {
     private pieceScrollView: ScrollView | null = null;
 
     private suggestionTween: Tween<Node>[] = [];
+    private suggestedPieceNodes: Node[] = [];
 
     public initialize(
         puzzleManager: PuzzleManager,
@@ -113,10 +114,12 @@ export class PuzzleStage extends Component {
         void this.renderPieces();
 
         this.disposables.push(eventBus.on('PiecePlaced', ({ pieceId }) => {
+            this.stopSuggestionAnimation();
             this.snapPieceNodeToBoard(pieceId);
         }));
 
         this.disposables.push(eventBus.on('PieceMoved', ({ pieceId, origin }) => {
+            this.stopSuggestionAnimation();
             this.snapPieceNodeToOrigin(pieceId, origin.x, origin.y);
         }));
 
@@ -132,6 +135,7 @@ export class PuzzleStage extends Component {
         }));
 
         this.disposables.push(eventBus.on('PiecesMerged', ({ pieceIds }) => {
+            this.stopSuggestionAnimation();
             this.animateMergedPieces(pieceIds);
             this.borderUpdater?.update(pieceIds);
         }));
@@ -142,6 +146,7 @@ export class PuzzleStage extends Component {
     }
 
     public dispose(): void {
+        this.stopSuggestionAnimation();
         this.disposables.forEach((dispose) => dispose());
         this.disposables.length = 0;
 
@@ -168,27 +173,38 @@ export class PuzzleStage extends Component {
             this.suggestionTween.forEach((t) => t?.stop());
             this.suggestionTween.length = 0;
         }
+
+
+        if (this.suggestedPieceNodes.length > 0) {
+            this.suggestedPieceNodes.forEach((node) => {
+                if (node && node.isValid) {
+                    node.setScale(1, 1, 1);
+                }
+            });
+            this.suggestedPieceNodes.length = 0;
+        }
     }
 
     public animateSuggestedPieces(firstPieceId: string, secondPieceId: string): void {
         this.stopSuggestionAnimation();
 
-        const firstRenderer = this.pieceRenderersById.get(firstPieceId);
-        const secondRenderer = this.pieceRenderersById.get(secondPieceId);
+        const pieceIds = Array.from(new Set([firstPieceId, secondPieceId].filter(Boolean)));
+        for (const pieceId of pieceIds) {
+            const renderer = this.pieceRenderersById.get(pieceId);
+            if (!renderer || !renderer.node || !renderer.node.isValid) {
+                continue;
+            }
 
-        this.suggestionTween.push(tween(firstRenderer?.node)
-            .to(0.2, { scale: new Vec3(1.2, 1.2, 1.2) })
-            .to(0.2, { scale: new Vec3(1, 1, 1) })
-            .repeatForever()
-            .start()
-        );
-
-        this.suggestionTween.push(tween(secondRenderer?.node)
-            .to(0.2, { scale: new Vec3(1.2, 1.2, 1.2) })
-            .to(0.2, { scale: new Vec3(1, 1, 1) })
-            .repeatForever()
-            .start()
-        );
+            this.suggestedPieceNodes.push(renderer.node);
+            this.suggestionTween.push(
+                tween(renderer.node)
+                    .to(0.4, { scale: new Vec3(1.2, 1.2, 1.2) })
+                    .to(0.4, { scale: new Vec3(1, 1, 1) })
+                    .union()
+                    .repeatForever()
+                    .start()
+            );
+        }
     }
 
     private ensureLayers(): void {

@@ -55,8 +55,17 @@ export class GameplayController {
                 await this.sceneManager!.loadLobbyScene();
             },
             onSuggestionRequested: async () => {
-                await this.suggestionManager!.provideSuggestion();
-            }
+                if (this.suggestionManager.isSuggestionAvailable()) {
+                    await this.suggestionManager.provideSuggestion();
+                } else {
+                    await this.gameplayUI.openSuggestionShop();
+                }
+            },
+            onBuySuggestionRequested: async () => {
+                return await this.suggestionManager.buySuggestion();
+            },
+            suggestionPrice: this.suggestionManager.suggestionPrice,
+            currentCoins: this.progressionManager.getCoins(),
         });
         this.completionSubscription = this.eventBus!.on('PuzzleCompleted', async ({ levelId, levelNumber: levelNumber }) => {
             this.pendingProgressSave = this.progressionManager!

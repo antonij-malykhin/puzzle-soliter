@@ -98,7 +98,11 @@ export class PlacementEngine {
             return null;
         }
 
-        const step = this.getMovementStep(anchorOrigin, droppedOrigin);
+        const step = {
+            x: droppedOrigin.x - anchorOrigin.x,
+            y: droppedOrigin.y - anchorOrigin.y,
+        };
+
         if (step.x === 0 && step.y === 0) {
             return null;
         }
@@ -147,7 +151,6 @@ export class PlacementEngine {
             groupPieceIds,
             targetByPieceId,
             enteringExternalPieceIds,
-            step,
         );
         if (!relocationPlan) {
             return null;
@@ -199,7 +202,6 @@ export class PlacementEngine {
         movingGroupPieceIds: ReadonlyArray<string>,
         movingTargets: ReadonlyMap<string, CellCoordinate>,
         enteringExternalPieceIds: ReadonlySet<string>,
-        step: CellCoordinate,
     ): Map<string, CellCoordinate> | null {
         const displacedGroups = this.collectDisplacedGroups(enteringExternalPieceIds, new Set<string>(movingGroupPieceIds));
         const displacedPieceIds = displacedGroups.reduce((accumulator: string[], group) => {
@@ -218,32 +220,15 @@ export class PlacementEngine {
         }
 
         for (const displacedGroup of displacedGroups) {
-            const translatedGroupPlan = new Map<string, CellCoordinate>();
-            for (const pieceId of displacedGroup) {
-                const currentOrigin = this.pieces.get(pieceId)?.getCurrentOrigin() ?? null;
-                if (!currentOrigin) {
-                    return null;
-                }
-
-                translatedGroupPlan.set(pieceId, {
-                    x: currentOrigin.x - step.x,
-                    y: currentOrigin.y - step.y,
-                });
-            }
-
-            if (this.tryReservePlannedPlacements(translatedGroupPlan, occupiedCells)) {
-                translatedGroupPlan.forEach((origin, id) => relocationPlan.set(id, origin));
-                continue;
-            }
-
-            // Keep-shape failed: split group and move each piece independently to free cells.
+            // Break apart displaced groups and push them to nearest free cells
             for (const pieceId of displacedGroup) {
                 const piece = this.pieces.get(pieceId);
-                if (!piece) {
+                const currentOrigin = piece?.getCurrentOrigin() ?? null;
+                if (!piece || !currentOrigin) {
                     return null;
                 }
 
-                const fallbackOrigin = this.findFirstAvailableOrigin(piece, occupiedCells);
+                const fallbackOrigin = this.findNearestAvailableOrigin(piece, currentOrigin, occupiedCells);
                 if (!fallbackOrigin) {
                     return null;
                 }
@@ -343,12 +328,21 @@ export class PlacementEngine {
         return true;
     }
 
-    private findFirstAvailableOrigin(piece: PuzzlePiece, occupiedCells: Set<string>): CellCoordinate | null {
-        for (let y = 0; y < this.board.getGridHeight(); y += 1) {
-            for (let x = 0; x < this.board.getGridWidth(); x += 1) {
-                const candidate: CellCoordinate = { x, y };
-                if (this.canPlacePieceWithoutOverlap(piece, candidate, occupiedCells)) {
-                    return candidate;
+    private findNearestAvailableOrigin(piece: PuzzlePiece, start: CellCoordinate, occupiedCells: Set<string>): CellCoordinate | null {
+        const w = this.board.getGridWidth();
+        const h = this.board.getGridHeight();
+        const maxRadius = Math.max(w, h);
+        
+        for (let r = 0; r <= maxRadius; r++) {
+            for (let dx = -r; dx <= r; dx++) {
+                for (let dy = -r; dy <= r; dy++) {
+                    if (Math.abs(dx) !== r && Math.abs(dy) !== r) {
+                        continue;
+                    }
+                    const candidate: CellCoordinate = { x: start.x + dx, y: start.y + dy };
+                    if (this.canPlacePieceWithoutOverlap(piece, candidate, occupiedCells)) {
+                        return candidate;
+                    }
                 }
             }
         }
@@ -369,19 +363,5 @@ export class PlacementEngine {
 
             return !occupiedCells.has(`${cell.x}:${cell.y}`);
         });
-    }
-
-    private getMovementStep(current: CellCoordinate, dropped: CellCoordinate): CellCoordinate {
-        const deltaX = dropped.x - current.x;
-        const deltaY = dropped.y - current.y;
-        if (deltaX === 0 && deltaY === 0) {
-            return { x: 0, y: 0 };
-        }
-
-        if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-            return { x: Math.sign(deltaX), y: 0 };
-        }
-
-        return { x: 0, y: Math.sign(deltaY) };
     }
 }

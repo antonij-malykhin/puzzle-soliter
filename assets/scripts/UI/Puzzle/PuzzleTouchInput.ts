@@ -25,7 +25,7 @@ export class PuzzleTouchInput {
     private activeDragGroupPieceIds: string[] = [];
     private lastPointerPosition: Vec2 | null = null;
 
-    public constructor(private readonly context: PuzzleTouchContext) {}
+    public constructor(private readonly context: PuzzleTouchContext) { }
 
     public bind(touchInputNode: Node | null): void {
         if (touchInputNode) {
@@ -61,7 +61,6 @@ export class PuzzleTouchInput {
 
     private onTouchStart(event: EventTouch): void {
         PerformanceMonitor.mark('touch-start');
-        this.context.stopSuggestionAnimation();
 
         const { inputManager } = this.context;
         const location = event.getUILocation();
@@ -72,6 +71,8 @@ export class PuzzleTouchInput {
         if (!selectedPiece) {
             return;
         }
+
+        this.context.stopSuggestionAnimation();
 
         this.activePieceId = selectedPiece.getId();
         this.activeDragGroupPieceIds = this.context.isRectSwapMergeMode()

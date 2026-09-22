@@ -32,7 +32,7 @@ export class LobbyDebugPanel extends Component {
     private openButton: Button | null = null;
 
     private progressionManager: ProgressionManager | null = null;
-    private onTargetChanged: DebugTargetChangedCallback = () => {};
+    private onTargetChanged: DebugTargetChangedCallback = () => { };
 
     public initialize(
         progressionManager: ProgressionManager,
@@ -62,17 +62,19 @@ export class LobbyDebugPanel extends Component {
     }
 
     private unbindButtons(): void {
-        if (this.applyButton) {
+        if (this.applyButton && this.applyButton.node) {
             this.applyButton.node.off(Button.EventType.CLICK, this.onApplyClicked, this);
         }
 
-        if (this.resetButton) {
+        if (this.resetButton && this.resetButton.node) {
             this.resetButton.node.off(Button.EventType.CLICK, this.onResetClicked, this);
         }
-        if (this.closeButton) {
+
+        if (this.closeButton && this.closeButton.node) {
             this.closeButton.node.off(Button.EventType.CLICK, this.onCloseClicked, this);
         }
-        if (this.openButton) {
+
+        if (this.openButton && this.openButton.node) {
             this.openButton.node.off(Button.EventType.CLICK, this.onOpenClicked, this);
         }
     }
@@ -80,7 +82,7 @@ export class LobbyDebugPanel extends Component {
     private onCloseClicked(): void {
         this.rootNode!.active = false;
     }
-    
+
     private onOpenClicked(): void {
         this.rootNode!.active = true;
     }

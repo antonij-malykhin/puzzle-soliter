@@ -15,15 +15,21 @@ export class SuggestionUI extends Component {
         this.suggestionCountLabel!.string = `${count}`;
     }
 
-    public initialize(eventBus: EventBus<GameEventMap>, suggestionCount: number) : void {
+    public initialize(eventBus: EventBus<GameEventMap>, suggestionCount: number): void {
         this.disposables.forEach((dispose) => dispose());
         this.disposables.length = 0;
 
         this.setSuggestionCount(suggestionCount);
-        const disposable = eventBus.on('SuggestionProvided', ({ newCount }) => {
-            this.setSuggestionCount(newCount);
-        });
-        this.disposables.push(disposable);
+        this.disposables.push(
+            eventBus.on('SuggestionCountChanged', ({ newCount }) => {
+                this.setSuggestionCount(newCount);
+            }),
+        );
+        this.disposables.push(
+            eventBus.on('SuggestionProvided', ({ newCount }) => {
+                this.setSuggestionCount(newCount);
+            }),
+        );
     }
 
     protected onDestroy(): void {

@@ -28,8 +28,8 @@ export class SuggestionManager {
     }
 
     /**
-     * Uses one free suggestion, or buys one for coins when the free pool is empty.
-     * A successfully provided suggestion is reported through 'SuggestionProvided';
+     * Uses one suggestion if available.
+     * Reports through 'SuggestionCountChanged' and 'SuggestionProvided';
      * PuzzleManager reacts by publishing the matching pair via 'SuggestionResult'.
      */
     public async provideSuggestion(): Promise<boolean> {
@@ -38,18 +38,29 @@ export class SuggestionManager {
             return true;
         }
 
+        return false;
+    }
+
+    /**
+     * Buys one suggestion for coins, increasing the available count.
+     * Reports through 'SuggestionCountChanged'.
+     */
+    public async buySuggestion(): Promise<boolean> {
         if (this.progressionManager.getCoins() < this.suggestionPrice) {
             return false;
         }
 
         await this.progressionManager.spendCoins(this.suggestionPrice);
-        await this.consumeSuggestion();
+        this.suggestionCount += 1;
+        await this.progressionManager.setSuggestionCount(this.suggestionCount);
+        this.eventBus.emit('SuggestionCountChanged', { newCount: this.suggestionCount });
         return true;
     }
 
     private async consumeSuggestion(): Promise<void> {
         this.suggestionCount = Math.max(0, this.suggestionCount - 1);
         await this.progressionManager.setSuggestionCount(this.suggestionCount);
+        this.eventBus.emit('SuggestionCountChanged', { newCount: this.suggestionCount });
         this.eventBus.emit('SuggestionProvided', { newCount: this.suggestionCount });
     }
 }

@@ -22,7 +22,10 @@ const DEFAULT_STRINGS: LocalizationDictionary = {
         previousRegionTitle: 'Previous region',
         nextRegionTitle: 'Next region',
         continueTitle: 'Continue',
-        regionNumber: 'Region: {number}'
+        regionNumber: 'Region: {number}',
+        buy: 'Buy',
+        youHave: 'You have',
+        suggestionShop: 'Suggestion shop',
     },
     ru: {
         loading: 'Загрузка...',
@@ -43,7 +46,10 @@ const DEFAULT_STRINGS: LocalizationDictionary = {
         previousRegionTitle: 'Предыдущий регион',
         nextRegionTitle: 'Следующий регион',
         continueTitle: 'Продолжить',
-        regionNumber: 'Регион: {number}'
+        regionNumber: 'Регион: {number}',
+        buy: 'Купить',
+        youHave: 'У вас есть',
+        suggestionShop: 'Магазин подсказок',
     },
 };
 

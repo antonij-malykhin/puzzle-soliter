@@ -16,5 +16,8 @@
     "playTitle": "Play",
     "previousRegionTitle": "Previous region",
     "nextRegionTitle": "Next region",
-    "regionNumber": "Region: {number}"
+    "regionNumber": "Region: {number}",
+    "buy": "Buy",
+    "youHave": "You have",
+    "suggestionShop": "Suggestion shop"
 }

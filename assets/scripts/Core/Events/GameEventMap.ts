@@ -21,6 +21,7 @@ export interface GameEventMap {
     PieceRotated: { pieceId: string; rotation: number };
     PuzzleCompleted: { levelId: string; levelNumber: number };
     SettingsChanged: { settings: GameSettings };
+    SuggestionCountChanged: { newCount: number };
     SuggestionProvided: { newCount : number };
     SuggestionResult: { firstPieceId: string; secondPieceId: string };
     MusicVolumeChanged: { volume: number };
