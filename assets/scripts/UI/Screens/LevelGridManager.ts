@@ -75,6 +75,11 @@ export class LevelGridManager extends Component {
         this.layout.spacingY = this.spacingY;
 
         // Выравнивание по центру
+        const totalGridWidth = cardWidth * this.cols + totalSpacingX;
+        const paddingX = Math.max(0, (containerWidth - totalGridWidth) / 2);
+        this.layout.paddingLeft = paddingX;
+        this.layout.paddingRight = paddingX;
+
         this.layout.horizontalDirection = Layout.HorizontalDirection.LEFT_TO_RIGHT;
         this.layout.verticalDirection = Layout.VerticalDirection.TOP_TO_BOTTOM;
 

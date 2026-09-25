@@ -5,17 +5,17 @@
       "polyfills": {
         "asyncFunctions": true
       },
-      "name": "PuzzleMozaicDebug",
-      "debug": true,
-      "sourceMaps": true,
+      "name": "PuzzleMozaicRelease",
+      "debug": false,
+      "sourceMaps": false,
       "useSplashScreen": false
     },
     "taskOptionsMap": {
       "1785949278169": {
         "useWebGPU": false,
         "resolution": {
-          "designWidth": 960,
-          "designHeight": 1280
+          "designWidth": 1440,
+          "designHeight": 2560
         },
         "__version__": "1.0.1"
       }
@@ -25,8 +25,8 @@
       "web-desktop": {
         "useWebGPU": false,
         "resolution": {
-          "designWidth": 960,
-          "designHeight": 1280
+          "designWidth": 1440,
+          "designHeight": 2560
         },
         "__version__": "1.0.1"
       }

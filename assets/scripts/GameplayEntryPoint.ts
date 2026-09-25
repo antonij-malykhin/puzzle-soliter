@@ -1,4 +1,4 @@
-import { _decorator, Component, UITransform } from 'cc';
+import { _decorator, Component, UITransform, Widget } from 'cc';
 import { PuzzleStage } from './UI/Puzzle/PuzzleStage';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { ServiceContainer } from './Core/ServiceContainer';
@@ -60,6 +60,25 @@ export class GameplayEntryPoint extends Component {
                     boardUITransform: this.boardUITransform,
                 },
             );
+
+            // [FIX] Prevent BoardLayer from stretching on wide screens.
+            // Remove left/right alignment and set fixed width based on design resolution.
+            if (this.boardUITransform) {
+                const widget = this.boardUITransform.getComponent(Widget);
+                if (widget) {
+                    widget.isAlignLeft = false;
+                    widget.isAlignRight = false;
+                    widget.isAlignTop = false;
+                    widget.isAlignBottom = false;
+                    widget.isAlignHorizontalCenter = true;
+                    widget.horizontalCenter = 0;
+                    widget.isAlignVerticalCenter = true;
+                    widget.verticalCenter = 0;
+                    // The puzzle images are 1080x2400, so we set the board to precisely match this aspect ratio and size.
+                    this.boardUITransform.setContentSize(1080, 2400); 
+                    widget.updateAlignment();
+                }
+            }
 
             await this.session.start();
         } finally {

@@ -13,6 +13,7 @@ export const SAVE_PROGRESS_KEY = 'mosaic.progress';
 export const GAMEPLAY_SCENE_NAME = 'gameplay';
 export const LOBBY_SCENE_NAME = 'lobby';
 export const LEVELS_PER_REGION = 25;
+export const MAX_REGIONS = 10;
 export const TRAINING_LEVEL_ID = 'level-1';
 export const TRAINING_LEVEL_RESOURCE_PATH = 'levels/region-1/level-1';
 export const LEVEL_CATALOG_RESOURCE_PATH = 'levels/region';

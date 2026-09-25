@@ -106,7 +106,7 @@ export class LobbyUI extends UIView {
 		this.showLevelGrid();
 	}
 
-	public showRegionComplete(regionImage: SpriteFrame, onNextRegion: () => void): void {
+	public showRegionComplete(regionImage: SpriteFrame, onNextRegion: () => void, isLastRegion: boolean = false): void {
 		if (!this.gridRoot || !this.playButton || !this.levelLabel || !this.regionCompleteSprite || !this.nextRegionButton) {
 			throw new Error('LobbyUI: required components are not set for showRegionComplete.');
 		}
@@ -118,7 +118,7 @@ export class LobbyUI extends UIView {
 		this.levelLabel.node.active = false;
 		this.regionCompleteSprite.node.active = true;
 		this.regionCompleteSprite.spriteFrame = regionImage;
-		this.nextRegionButton.node.active = true;
+		this.nextRegionButton.node.active = !isLastRegion;
 		this.nextRegionButton.node.off(Button.EventType.CLICK, this.onNextRegionClicked, this);
 		this.nextRegionButton.node.on(Button.EventType.CLICK, this.onNextRegionClicked, this);
 		this.particlesEffect.forEach(effect => effect.resetSystem());

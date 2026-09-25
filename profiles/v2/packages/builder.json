@@ -7,9 +7,9 @@
     "polyfills": {
       "asyncFunctions": true
     },
-    "name": "PuzzleMozaicDebug",
-    "debug": true,
-    "sourceMaps": true,
+    "name": "PuzzleMozaicRelease",
+    "debug": false,
+    "sourceMaps": false,
     "useSplashScreen": false
   },
   "BuildTaskManager": {
@@ -20,20 +20,20 @@
         "progress": 1,
         "state": "success",
         "stage": "build",
-        "message": "22.09.2026 12:53:25 build success in 1 min 13 s!",
-        "detailMessage": "// ---- build task cocos-service：onAfterBuild ----\r",
+        "message": "24.09.2026 16:33:19 build success in 49 s!",
+        "detailMessage": "builder:build-project-total (48980ms)\r",
         "options": {
-          "name": "PuzzleMozaicDebug",
+          "name": "PuzzleMozaicRelease",
           "server": "",
           "engineModulesConfigKey": "defaultConfig",
           "platform": "web-desktop",
           "buildPath": "project://build",
-          "debug": true,
+          "debug": false,
           "buildMode": "normal",
           "mangleProperties": false,
           "md5Cache": false,
           "skipCompressTexture": false,
-          "sourceMaps": true,
+          "sourceMaps": false,
           "overwriteProjectSettings": {
             "includeModules": {
               "gfx-webgl2": "on",
@@ -86,7 +86,7 @@
           "__version__": "1.3.9",
           "logDest": "project://temp/builder/log/web-desktop05.08.2026 20-01.log"
         },
-        "time": "22.09.2026 12:52:12",
+        "time": "24.09.2026 16:32:29",
         "dirty": false
       }
     }

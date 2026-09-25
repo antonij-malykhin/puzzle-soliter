@@ -1,4 +1,4 @@
-import { SAVE_PROGRESS_KEY, SAVE_SETTINGS_KEY } from '../Core/Config/GameConstants';
+import { MAX_REGIONS, SAVE_PROGRESS_KEY, SAVE_SETTINGS_KEY } from '../Core/Config/GameConstants';
 import { IStorageProvider } from '../Data/Interfaces/IStorageProvider';
 import { createDefaultGameProgress, GameProgress } from '../Data/Models/GameProgress';
 import { createDefaultGameSettings, GameSettings } from '../Data/Models/GameSettings';
@@ -34,7 +34,7 @@ export class SaveManager {
             bestTimeByLevelSeconds: stored.bestTimeByLevelSeconds ?? defaults.bestTimeByLevelSeconds,
             currentLevelId: stored.currentLevelId ?? defaults.currentLevelId,
             recentlyCompletedLevelId: stored.recentlyCompletedLevelId ?? defaults.recentlyCompletedLevelId,
-            regionNumber: typeof stored.regionNumber === 'number' ? stored.regionNumber : defaults.regionNumber,
+            regionNumber: typeof stored.regionNumber === 'number' ? Math.max(1, Math.min(MAX_REGIONS, stored.regionNumber)) : defaults.regionNumber,
             coins: typeof stored.coins === 'number' ? stored.coins : defaults.coins,
             suggestionCount: typeof stored.suggestionCount === 'number'
                 ? stored.suggestionCount
@@ -43,6 +43,7 @@ export class SaveManager {
     }
 
     public async saveProgress(progress: GameProgress): Promise<void> {
-        await this.storageProvider.setItem(SAVE_PROGRESS_KEY, progress);
+        const clampedProgress = { ...progress, regionNumber: Math.max(1, Math.min(MAX_REGIONS, progress.regionNumber)) };
+        await this.storageProvider.setItem(SAVE_PROGRESS_KEY, clampedProgress);
     }
 }

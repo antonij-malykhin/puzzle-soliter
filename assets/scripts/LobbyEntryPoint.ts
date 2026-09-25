@@ -11,7 +11,7 @@ import { ImageService } from './Services/ImageService';
 import { LevelCatalogData } from './Data/Models/LevelCatalog';
 import { LevelService } from './Services/LevelService';
 import { SceneManager } from './Managers/SceneManager';
-import { GAMEPLAY_SCENE_NAME } from './Core/Config/GameConstants';
+import { GAMEPLAY_SCENE_NAME, MAX_REGIONS } from './Core/Config/GameConstants';
 import { SpriteFrameSliceService } from './Services/SpriteFrameSliceService';
 import { YandexAdManager } from './Managers/YandexAdManager';
 import { LoadingService } from './Services/LoadingService';
@@ -71,13 +71,15 @@ export class LobbyEntryPoint extends Component {
             if (this.debugCompleteRegionButton) {
                 this.debugCompleteRegionButton.node.on(Button.EventType.CLICK, async () => {
                     await this.progressionManager.markRegionCompleted();
-                    this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this));
+                    const isLastRegion = this.progressionManager.getCurrentRegionNumber() >= MAX_REGIONS;
+                    this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this), isLastRegion);
                     await this.lobbyUI.show();
                 }, this);
             }
 
             if (this.progressionManager.isCurrentRegionCompleted()) {
-                this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this));
+                const isLastRegion = this.progressionManager.getCurrentRegionNumber() >= MAX_REGIONS;
+                this.lobbyUI.showRegionComplete(this.regionImage!, this.loadNextRegion.bind(this), isLastRegion);
                 await this.lobbyUI.show();
                 log('LobbyEntryPoint: Region complete screen shown.');
                 return;

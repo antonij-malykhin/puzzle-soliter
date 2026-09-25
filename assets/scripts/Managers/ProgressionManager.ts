@@ -2,7 +2,7 @@ import { GameProgress } from '../Data/Models/GameProgress';
 import { SaveManager } from './SaveManager';
 import { LevelService } from '../Services/LevelService';
 import { WalletManager } from './WalletManager';
-import { LEVELS_PER_REGION } from '../Core/Config/GameConstants';
+import { LEVELS_PER_REGION, MAX_REGIONS } from '../Core/Config/GameConstants';
 
 export class ProgressionManager {
     private progress: GameProgress | null = null;
@@ -244,6 +244,10 @@ export class ProgressionManager {
         }
 
         const progress = this.requireProgress();
+        if (progress.regionNumber >= MAX_REGIONS) {
+            return;
+        }
+
         progress.regionNumber += 1;
         this.orderedLevelIds = [
             ...(await this.levelService.getOrderedLevelIds(progress.regionNumber)),
